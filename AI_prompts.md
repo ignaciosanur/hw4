@@ -253,3 +253,42 @@ format using the password the assignment provided.
   safety from `prompts/prompt.md`, so the file can grow in later problems.
 - **Chat persistence to the DB was deferred** — not required here and better placed with the
   "remember me" work later.
+
+---
+
+## Problem 6: Tools — Product Info and Stock
+
+### Initial prompt
+
+> ok perfect, so here you got problem 6: Tools: product info and stock
+>
+> The model needs some tools that look up real information from campus_customs.db:
+>
+> * product dexcription
+> * price
+> * how many are in stock (and including by size in case the customer asks)
+>
+> The model will be using the database, not inventing prices or quantities. If a size is out of stock please say that clearly
+>
+> Expand "prompt/prompt.md" so the agent knows to call these tools for price and stock questions. Add or update return types in models.py
+>
+> In output/harness.md list each tool and explain which model fiels were chosen for lookup results and why
+
+### Context prompt (just before)
+
+> Look at lecture notes and learn what are relevant tools that I could use for looking up real information from campus_customs.db https://zlisto.github.io/mgt_409_fa26/lectures.html
+
+### What we worked out before building
+
+- **Read the course lectures first** (Lec 3 Tools & Skills, Lec 4 Agents). They teach the
+  custom-tool pattern and "never invent numbers — call tools for live data", but show no DB
+  example (their tools use yfinance). So `campus_customs.db` tools are the "your data" edge the
+  lectures say to build.
+- **Tools were rebuilt around the three asks** (description / price / stock-by-size), each with a
+  dedicated typed return in models.py (`ProductInfo`, `StockInfo`, `ProductMatch`,
+  `SizeAvailability`) so field choices are explicit and documented.
+- **Out-of-stock is a structured signal, not an inference**: `StockInfo` exposes
+  `out_of_stock_sizes` / `in_stock_sizes` ready-made, so the agent states it plainly.
+- **Lookup vs display stay separate**: price/description/stock tools return facts; `show_products`
+  handles the cards, so stock is never quoted from a possibly-stale detail object.
+- **Adopted one Lecture-4 harness piece now**: `UsageLimits(request_limit=8)` as a stopping rule.

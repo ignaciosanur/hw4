@@ -427,3 +427,65 @@ Guest and signed-in chat (greets "Hi Test"); honest stock ("XL, 2 available"; "X
 available in S, M, L, XXL"); card/reply alignment (1 rec → 1 card, 4 recs → 4 cards); no-match
 honesty (0 forced cards); multi-turn context ("the first one" resolved from history). Browser cards
 render with image, price and live per-size stock; console clean.
+
+---
+
+## 8. Problem 6 — product & stock lookup tools
+
+The agent's tools were rebuilt around the three things a shopper asks — **description, price,
+stock (incl. by size)** — each returning a typed model from `models.py` so the agent reads
+structure, not prose. Every tool reads the database **live, read-only**; nothing about price or
+stock comes from memory or the prompt.
+
+### Tools and their return types
+
+| tool | returns | answers |
+|---|---|---|
+| `search_products(query)` | `list[ProductMatch]` | find products / resolve a name → `product_id` |
+| `lookup_product(product_id)` | `ProductInfo` | description, price, colours |
+| `check_stock(product_id)` | `StockInfo` | total and per-size stock, out-of-stock called out |
+| `show_products(ids)` | (confirmation) | display chosen products as cards (`ProductCard`) |
+| `list_categories()` | text | categories and prices, for browsing |
+
+### Which fields each result carries, and why
+
+**`ProductMatch`** (search hit — kept deliberately small, Lecture 3 "keep returns short"):
+- `product_id` — the key `lookup_product` / `check_stock` need next.
+- `product_name`, `garment_type` — so the agent can list options and disambiguate ("the hoodie").
+- `price` — answers the most common immediate follow-up without another call.
+- `colors`, `total_stock` — a coarse "do you have it at all" signal.
+- *Omitted:* full description and per-size stock — those are one focused call away, so search
+  stays short and the agent is pushed to confirm live before quoting stock.
+
+**`ProductInfo`** (the "what is this / how much" answer):
+- `description` — the **full** catalogue text, not the card's clipped `short_description`.
+- `price` — the authoritative figure the agent must quote rather than recall.
+- `product_name`, `garment_type`, `colors`, `image_url` — round out the product.
+- *Omitted:* stock — availability is live and belongs in `check_stock`, so the agent never
+  quotes stock from a product detail that could be stale.
+
+**`StockInfo`** (the honest-stock answer; fields chosen so out-of-stock is explicit, not inferred):
+- `total_stock`, `any_in_stock` — quick "in stock at all?" signals.
+- `in_stock_sizes` / `out_of_stock_sizes` — **ready-made lists** so the agent can say "available
+  in S, M, L" and "XS and XL are out of stock" directly, without scanning quantities.
+- `by_size: list[SizeAvailability]` — the full per-size detail, each with an explicit `in_stock`
+  flag (so a zero never has to be interpreted) and `quantity` for "how many in XL" questions.
+
+**`ProductCard`** (unchanged display shape for the widget) keeps `short_description` and the stock
+summary the cards render; it is produced only by `show_products`, separating *display* from the
+*lookup* results above.
+
+### Prompt changes (`prompts/prompt.md`)
+The product section now names each tool and routes questions to it: price → `lookup_product`;
+stock/size → `check_stock`, and if the asked size is in `out_of_stock_sizes`, **say so plainly**
+and offer `in_stock_sizes`. It restates: never invent or recall a price/quantity; check stock live
+every time.
+
+### Harness hardening (from Lecture 4)
+Added `UsageLimits(request_limit=8)` to `agent.run` — the "stopping rule" so the ReAct loop cannot
+run away on cost. Tools returning typed models is itself the lecture's "typed outputs" grounding.
+
+### Verified live
+Price ("$68.00" from the DB), description (full text), stock-by-size ("out of stock in XL;
+available in S, M, L, XXL" — exact DB match), exact quantity ("2 in XL", DB = 2), and the
+hallucination guard (refuses to price a product that does not exist).
