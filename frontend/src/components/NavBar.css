@@ -58,3 +58,5 @@
   .nav-inner { padding-top: 0.75rem; padding-bottom: 0.75rem; }
   .nav-links { margin-left: 0; width: 100%; order: 3; gap: 1.1rem; }
 }
+
+.nav-greet { color: #fff; font-weight: 600; font-size: 0.9rem; align-self: center; }

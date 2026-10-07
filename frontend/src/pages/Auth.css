@@ -24,3 +24,26 @@
   color: var(--ink-soft);
 }
 .auth-alt { margin-top: 1.75rem; font-size: 0.9rem; color: var(--ink-soft); }
+
+.pw-rules { list-style: none; margin: -0.3rem 0 0; padding: 0; display: grid; gap: 0.2rem; font-size: 0.8rem; color: var(--ink-soft); }
+.pw-rules li.ok { color: #1f6b35; }
+.pw-rules li span { display: inline-block; width: 1.1em; }
+
+.hint-warn { color: #9b2222; }
+.auth-error {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  background: #fdf4f4;
+  border-left: 3px solid #c0392b;
+  border-radius: 6px;
+  color: #8a2424;
+  font-size: 0.88rem;
+}
+.linklike { background: none; border: none; padding: 0; color: var(--yale-blue); cursor: pointer; font: inherit; text-decoration: underline; }
+
+.forgot { margin: 1rem 0 1.5rem; padding: 1rem; background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius); }
+.forgot form { display: flex; flex-direction: column; gap: 0.7rem; }
+.forgot label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; font-weight: 600; }
+.forgot input { padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 400; }
+.forgot-sent { margin-top: 0.9rem; font-size: 0.86rem; }
+.forgot-sent p { margin: 0 0 0.5rem; }

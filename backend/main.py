@@ -20,14 +20,16 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend import display
+from backend import auth, display, security
 
 ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT / ".env")
 DB_PATH = ROOT / "data" / "campus_customs.db"
 PRODUCTS_DIR = ROOT / "data" / "products"
 
@@ -40,6 +42,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
+
+
+@app.get("/api/auth/me", response_model=auth.UserPublic)
+def current_user(authorization: str = Header(default="")) -> auth.UserPublic:
+    """Resolve the bearer session token to the logged-in user, for the front end to
+    restore state on reload. 401 if the token is missing, invalid or expired."""
+    token = authorization.removeprefix("Bearer ").strip()
+    email = security.read_token(token, "session") if token else None
+    if not email:
+        raise HTTPException(status_code=401, detail="Not signed in")
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, first_name, last_name, email FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=401, detail="Not signed in")
+    return auth.UserPublic(id=row["id"], first_name=row["first_name"] or "",
+                           last_name=row["last_name"] or "", email=row["email"])
 
 
 # ---------------------------------------------------------------- models

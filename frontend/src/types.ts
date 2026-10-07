@@ -29,3 +29,15 @@ export interface ChatReply {
   products: ProductSummary[]
   stub?: boolean
 }
+
+export interface UserPublic {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+}
+
+export interface AuthResponse {
+  user: UserPublic
+  session_token: string
+}

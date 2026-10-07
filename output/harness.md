@@ -288,3 +288,81 @@ reaches FastAPI and returns. Console clean, no warnings. Mobile (375px) reflows.
 ### Snag worth remembering
 Vite 8 binds `::1` only by default, so anything probing `127.0.0.1` — including the in-app preview
 — cannot reach it. `server.host: '127.0.0.1'` in `vite.config.ts` fixes it.
+
+### 5.1 Display formatting (`backend/display.py`)
+`catalogue.name` is title-cased from URL slugs, which Problem 3 made visible on the storefront:
+"Benjamin Franklin 1 4 Zip", "School Of Art", "2025 Yale Vs Harvard T Shirt", "Ua Mens Tech L S 2 0".
+46 of 102 names carried an artifact.
+
+Fixed **at the display layer only** — the database is never written. That matters: the agent will
+match against the stored text, so cleaning here cannot cost a search hit. Handles fractions
+(`1 4 Zip` → `¼-Zip`), lost hyphens (`T Shirt` → `T-Shirt`), possessives (`Mens` → `Men's`),
+brands (`Ua` → `UA`), minor words (`School Of` → `School of`), and version numbers (`2 0` → `2.0`).
+After formatting, 0 of 102 names retain a detectable artifact.
+
+`garment_type` gets casing normalization for the card subtitle. **Casing only** — it does not
+collapse the 22 values into categories; the taxonomy in §3 stays a design note.
+
+### 5.2 Git
+Initialized at the end of Problem 3 rather than at submission, so the first commit could be
+inspected by eye. 47 files tracked. Verified ignored: `data/` (database + 102 images), `.env`,
+`.venv/`, `frontend/node_modules/`. Unused Vite scaffold assets were deleted rather than committed.
+
+**Before every `git add`: run `git status` and confirm no database, images or secrets are staged.**
+
+---
+
+## 6. Problem 4 — accounts and login
+
+### What is stored for a user
+`users` row: `id`, `first_name`, `last_name`, `name` (legacy, kept as `first last`), `email`
+(unique, lowercased), `password_hash`, `created_at`. **Never a plaintext password.** The API only
+ever returns `UserPublic` (id, first/last name, email) — the hash cannot be serialized out because
+no response model contains it.
+
+### How passwords are protected
+- **PBKDF2-HMAC-SHA256, 600,000 iterations, 16-byte random per-password salt** — the OWASP
+  FIPS-compliant recommendation ([Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)).
+  Argon2id is OWASP's first choice but needs a native dependency; the seed data was already
+  PBKDF2-SHA256, so staying on it keeps one scheme and the stdlib.
+- Stored self-describing: `pbkdf2_sha256$<iterations>$<salt_hex>$<digest_hex>`, so the work factor
+  travels with the hash and can be raised later. `needs_rehash()` flags anything below current.
+- Verification is constant-time (`hmac.compare_digest`).
+- Legacy 3-segment seed hashes (no iteration count) are **not verifiable** — by decision, only
+  accounts created through this app can log in.
+
+### Password policy (`security.password_problems`)
+≥8 chars, upper, lower, digit, symbol. Enforced server-side; the signup form mirrors it as a live
+checklist and requires a matching confirm field.
+
+### Online-guessing protection
+Per-email: 5 failed logins within 15 min → locked 15 min. The lockout clears on a successful
+password reset, and the messages steer a locked user to reset. In-memory (fine for one process;
+a real deployment would use Redis so it spans workers and survives restarts).
+
+### Forgot / reset password
+No mail server in this build, so `forgot-password` returns a real signed, 1-hour, single-purpose
+token as a link (also printed to the server console), clearly labelled as simulated email. The
+reset page consumes the token, applies the password policy, updates the hash, clears any lockout,
+and returns a session. **Unknown email returns 404 with an explicit "no account" message**, as the
+assignment asked (a deliberate departure from the usual privacy-preserving silence).
+
+### Sessions
+Login/register/reset return an HMAC-signed 7-day session token (`AUTH_SECRET`). The front end stores
+it and validates via `GET /api/auth/me` on reload. `AUTH_SECRET` and `FRONTEND_URL` added to `.env`.
+
+### The test account
+The seed `test@campuscustoms.yale.edu` used the unreproducible legacy format. `seed_dev_user.py`
+re-registers just that account with the known password `password` in our format, so login is
+demonstrable. Idempotent, dev-only, touches one row; the DB is git-ignored.
+
+### Verified end-to-end (API + browser)
+1. **Log in as `test@campuscustoms.yale.edu` / `password`** → UI shows "Hi, Test", session persisted. ✓
+2. **New account via the signup form** ("Grace Hopper") → written as `users` row 7, logged in as
+   "Hi, Grace", hash is 600k PBKDF2 with no plaintext. ✓
+3. Wrong password → generic 401 with a decrementing counter (4,3,2,1), then **lockout 429**.
+4. Duplicate email → 409. Weak password → 422 listing what's missing.
+5. Forgot unknown email → 404 "no account". Forgot known → simulated reset link.
+6. Reset with token → new password works, old rejected, lockout cleared.
+
+Throwaway accounts from API testing were deleted; the DB holds only the 3 seed users.

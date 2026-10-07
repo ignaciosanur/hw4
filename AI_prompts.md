@@ -150,3 +150,64 @@ had not been tested against the data.
   in the seeded chat data but in no table.
 - **The chat stub returns no products.** Inventing plausible matches would make the stub look
   more finished than it is.
+
+### Follow-up prompt
+
+> Anything else we should change about this step before we go to problem 4: create account and login?
+
+What was lacking after the first: building the storefront exposed a problem that had been parked
+as invisible — 46 of 102 product names render with slug artifacts ("Benjamin Franklin 1 4 Zip"),
+which is a visible defect once there is a page to see it on.
+
+- **Display names fixed in the API, not the database** (`backend/display.py`), so the agent can
+  still match the stored text verbatim later. 0 of 102 names retain an artifact.
+- **`garment_type` casing normalized for the card subtitle** — casing only, not the taxonomy.
+- **Git initialized now rather than at submission**, so the first commit was small enough to
+  inspect by eye and confirm the database and images were excluded.
+
+---
+
+## Problem 4: Create Account and Login
+
+### Initial prompt
+
+> Ok problem 4: create account and login
+>
+> We'll build a common "create-account / log in" flow
+>
+> * Create account: first name, last name, email, password (confirm password as well) password has to follow a format (e.g., minimum characters, inclusion of symbols, etc.)
+> * Log in: email and password
+>
+> Also add something about "forgot password" so they get sent a reboot password link to their email address if that's the case. If there's no account with that email, let them know
+>
+> New accounts log into the "users" table. Make so to store passwords securely (use hashing, i guess) so no hackers (human or AI) cannot access them. Also, think of a limit of password attempts so people or AI don't try infinite amoutns of passwords to hack it. In that case, ask to reboot password to the user.
+>
+> The seed database already has a test user you can use while building:
+> * email: test@campuscustoms.yale.edu
+> * Password: password
+>
+> Claude, please confirm that you can log in as that user, and that a brand-new account you create (another test) also works.
+>
+> Update output/harness.md with how the authorization works (e..g, what we store for a user and how passwords are protected). Do some online search on what is the best way to do this. Also let me know if you need more info in case you don't agree or have gaps with this prompts
+
+### What we worked out before building
+
+- **Only app-created accounts can log in.** The seed users' hash format (3-segment, no iteration
+  count) is not reproducible; the user confirmed legacy users like Tauhid were just tests. The
+  test account is re-seeded into our format via `seed_dev_user.py` so its login is demonstrable.
+- **PBKDF2-SHA256 at 600k iterations**, chosen over Argon2id (OWASP's first pick) to avoid a native
+  dependency and because the seed data already used PBKDF2. Researched against the OWASP Password
+  Storage Cheat Sheet, as asked.
+- **Forgot-password is simulated**, not mocked: a real signed, expiring token and a working reset
+  page, with the link shown in the UI and logged instead of emailed (no mail server in this build).
+- **Lockout clears on a time window or a password reset**, matching the "ask to reset" instruction
+  rather than permanently bricking an account.
+- **Unknown email on forgot-password returns an explicit 404**, as the prompt asked — a deliberate
+  departure from the usual privacy-preserving "we sent a link if it exists".
+
+### Note on process
+
+While detecting the test fixture's hash parameters, a safety classifier and the auto-mode
+classifier flagged the hash-construction checks as resembling password cracking. The approach was
+changed: rather than reverse the legacy hash, the test account is re-registered into this app's
+format using the password the assignment provided.

@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth'
 import './NavBar.css'
 
 const LINKS = [
@@ -8,6 +9,9 @@ const LINKS = [
 ]
 
 export default function NavBar() {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+
   return (
     <header className="nav">
       <div className="wrap nav-inner">
@@ -32,8 +36,25 @@ export default function NavBar() {
         </nav>
 
         <div className="nav-account">
-          <NavLink to="/login" className="btn btn-ghost btn-sm">Log in</NavLink>
-          <NavLink to="/signup" className="btn btn-primary btn-sm">Create account</NavLink>
+          {user ? (
+            <>
+              <span className="nav-greet">Hi, {user.first_name}</span>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  signOut()
+                  navigate('/')
+                }}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login" className="btn btn-ghost btn-sm">Log in</NavLink>
+              <NavLink to="/signup" className="btn btn-primary btn-sm">Create account</NavLink>
+            </>
+          )}
         </div>
       </div>
     </header>
