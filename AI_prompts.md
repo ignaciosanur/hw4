@@ -292,3 +292,31 @@ format using the password the assignment provided.
 - **Lookup vs display stay separate**: price/description/stock tools return facts; `show_products`
   handles the cards, so stock is never quoted from a possibly-stale detail object.
 - **Adopted one Lecture-4 harness piece now**: `UsageLimits(request_limit=8)` as a stopping rule.
+
+---
+
+## Problem 7: Chat Search That Updates the Page
+
+### Initial prompt
+
+> Problem 7: Chat search that updates the page
+>
+> Now we will add a neat feature to the site. Whena customer asks about a type of item, e.g., "what hoodies do you have?" the agent should search the catalogue and the website should DYNAMICALLY show those matching items as product cards (imgae, name, price, short description).
+>
+> This is the API contract: the agent returns structured product matches and then the front end renders them on the website. It has to be visually appealling.
+>
+> After the dynamic product cards are loaded by the new feature, make sure the same single-item page behavior we built in problem 3 still works:(each product card, including the ones the chat just put on the page, should still open that detail view (large image + full info) when clicked.
+>
+> Update "prompts/prompt.md and output/harness.md so it is clear how search results reach the page, please
+
+### What we worked out before building
+
+- **The API contract already existed** from Problems 5–6 (`ChatResponse.products` is structured).
+  Problem 7 is the front-end half: render those matches on the website.
+- **The page is the product surface.** When the agent surfaces products, a shared context drives
+  the Products grid and the app navigates there, so the *website* shows the matches (not just the
+  chat bubble). The in-bubble cards were replaced by a compact "N items shown on the page →" link
+  to avoid displaying the same products twice.
+- **One card component everywhere** (`ProductGridCard`), so catalogue and chat-placed cards look
+  identical and both open the Problem 3 detail page by `product_id`.
+- **A "Show all products" clear** returns the grid to the full catalogue.

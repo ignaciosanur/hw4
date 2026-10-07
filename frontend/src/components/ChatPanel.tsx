@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useChatResults } from '../chatResults'
 import { sendChatMessage } from '../api'
 import type { ChatProductCard, ChatReply } from '../types'
 import './ChatPanel.css'
@@ -25,6 +26,8 @@ export default function ChatPanel() {
   const [sending, setSending] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
+  const { show } = useChatResults()
 
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
@@ -58,6 +61,12 @@ export default function ChatPanel() {
       const token = localStorage.getItem('cc.session') ?? undefined
       const reply: ChatReply = await sendChatMessage(message, history, token)
       setTurns((t) => [...t, { role: 'assistant', text: reply.reply, products: reply.products }])
+      // Chat updates the page: surface the matches on the storefront grid and take the
+      // shopper there, so the website itself shows what they asked about.
+      if (reply.products.length > 0) {
+        show(reply.products, message)
+        navigate('/products')
+      }
     } catch {
       setTurns((t) => [
         ...t,
@@ -94,26 +103,9 @@ export default function ChatPanel() {
             <div key={i} className={`bubble-row bubble-row-${t.role}`}>
               <div className={`bubble bubble-${t.role}`}>{t.text}</div>
               {t.products && t.products.length > 0 && (
-                <ul className="chat-cards">
-                  {t.products.map((p) => (
-                    <li key={p.product_id}>
-                      <Link to={`/products/${p.product_id}`} className="chat-card" onClick={() => setOpen(false)}>
-                        <img src={p.image_url} alt={p.product_name} loading="lazy" />
-                        <div className="chat-card-info">
-                          <span className="chat-card-name">{p.product_name}</span>
-                          <span className="chat-card-price">${p.price.toFixed(2)}</span>
-                          <span className={`chat-card-stock ${p.total_stock === 0 ? 'oos' : ''}`}>
-                            {p.total_stock === 0
-                              ? 'Out of stock'
-                              : p.sizes_out.length === 0
-                                ? 'All sizes in stock'
-                                : `In: ${p.sizes_in_stock.join(', ')}`}
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <Link to="/products" className="chat-onpage" onClick={() => setOpen(false)}>
+                  🛍️ {t.products.length} {t.products.length === 1 ? 'item' : 'items'} shown on the page →
+                </Link>
               )}
             </div>
           ))}

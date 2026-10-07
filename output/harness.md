@@ -489,3 +489,40 @@ run away on cost. Tools returning typed models is itself the lecture's "typed ou
 Price ("$68.00" from the DB), description (full text), stock-by-size ("out of stock in XL;
 available in S, M, L, XXL" — exact DB match), exact quantity ("2 in XL", DB = 2), and the
 hallucination guard (refuses to price a product that does not exist).
+
+---
+
+## 9. Problem 7 — chat search that updates the page
+
+### How a search result reaches the page (end to end)
+1. The shopper asks in the chat widget (e.g. "what hoodies do you have?").
+2. `POST /api/chat` runs the agent. When it calls `show_products(ids)`, those products are
+   collected and returned in `ChatResponse.products` as structured `ProductCard`s — **this is the
+   API contract**: the agent returns structured matches, the front end renders them.
+3. `ChatPanel` receives the reply. If `products` is non-empty it calls `show(products, question)`
+   on the shared **`ChatResultsProvider`** context and navigates to `/products`.
+4. The **Products page** reads that context: when chat results are present it renders them as the
+   storefront grid under a "From your chat — N matches for '…'" banner, with a **Show all
+   products** button that clears the context back to the full catalogue.
+5. The chat bubble keeps the reply short and shows a "N items shown on the page →" link, so the
+   chat and the page stay connected without duplicating the cards.
+
+Navigation is client-side (react-router), so the page updates **dynamically** with no reload.
+
+### Cards are one component everywhere
+Catalogue cards and chat-driven cards are the same `ProductGridCard` (image, name, garment type,
+short description, price), so they look identical and **every card links to the Problem 3 detail
+page** by `product_id`. A chat-placed card opens the same large-image + full-info + sizes/stock
+view as a catalogue card — verified in the browser.
+
+### Why this shape
+- The structured `products` already existed (Problem 5/6); Problem 7 is the front-end half of the
+  same contract, so no API change was needed — the agent's `show_products` choices drive the page.
+- The page (not the chat bubble) is the product surface now, because the assignment asks the
+  *website* to show the matches; the in-bubble cards were replaced by a compact link to avoid
+  showing the same products twice.
+
+### Verified in the browser
+Asked "what hoodies do you have?" from the Home page → navigated to `/products`, grid showed 8
+hoodie cards under the banner; clicking a chat-placed card opened its detail page ($68.00, sizes,
+large image); "Show all products" restored the full 102. Console clean.

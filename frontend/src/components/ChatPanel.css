@@ -122,3 +122,16 @@
 .chat-card-price { color: var(--accent); font-weight: 700; font-size: 0.85rem; }
 .chat-card-stock { font-size: 0.72rem; color: #1f6b35; }
 .chat-card-stock.oos { color: #9b2222; }
+
+.chat-onpage {
+  display: inline-block;
+  margin-top: 0.1rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--yale-blue);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.chat-onpage:hover { background: var(--yale-blue-dark); text-decoration: none; }
