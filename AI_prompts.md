@@ -211,3 +211,45 @@ While detecting the test fixture's hash parameters, a safety classifier and the 
 classifier flagged the hash-construction checks as resembling password cracking. The approach was
 changed: rather than reverse the legacy hash, the test account is re-registered into this app's
 format using the password the assignment provided.
+
+---
+
+## Problem 5: PydanticAI Agent Backend
+
+### Initial prompt
+
+> Problem 5: Pydantic AI agen backend
+>
+> Build the shop chatbot as a PydanticAI agent behind FastAPI plugged into your front-end chat widget. Put the API app in backend/main.py --that is the file you run with Uvicorn. Keep the agent as these four files next to is (the same idea as homework 3):
+>
+> * Backend/prompts/prompt.md --system prompt (grwo this same file later)
+> * Backend/agent.py - agent entry/wiring
+> * backend/tools.py --tools the agent can call
+> * backend/models.py --pydantic / ;ydanticAI structured types
+>
+> In main.py, expose a chat route so a message from the website returns a reply form the agent (and whatever else we need for product/auth). You will need you AI model API key for the agent.
+>
+> Put Campus Customs voice and safety basics into prompts/prompt.md (we will expand on tools and and safety later). Start or uopdate types in models.py for chat replies/product cards as needed
+>
+> In output/harness.md, note how the front end talks to FastAPI and how the agent is loaded (prompt file + model)
+>
+> Make sure the backend runs from the backend/ folder like this:
+> uvicorn main:app --reload --port 8000
+>
+> Feel free to improve this prompt as needed
+
+### What we worked out before building
+
+- **Backend imports went flat** (`import security` not `from backend import security`) so the app
+  runs as `uvicorn main:app` from `backend/`, exactly as asked.
+- **Port 8000 is held by another course folder on this machine**, so the committed default is 8000
+  (per the prompt, free on a TA's machine) and local testing uses a git-ignored `.env.local`
+  override pointing the Vite proxy at 8010.
+- **search vs show split.** Rather than carding every search hit, `search_products` returns
+  candidates and a separate `show_products(ids)` displays only what the agent recommends — so the
+  cards match the reply. This was added after seeing a one-item reply surface six cards.
+- **Auth is wired into chat**: a session token greets the shopper by first name; guests are fine.
+- **Model and prompt load from config**, never hard-coded: `gpt-5.6-luna` from `.env`, voice and
+  safety from `prompts/prompt.md`, so the file can grow in later problems.
+- **Chat persistence to the DB was deferred** — not required here and better placed with the
+  "remember me" work later.

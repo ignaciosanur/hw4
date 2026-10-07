@@ -1,0 +1,125 @@
+"""Database-backed tools the shop agent can call.
+
+Pure functions (no agent decorators) so they are independently testable; agent.py wraps
+them as PydanticAI tools. Every function opens the database read-only — the agent can read
+the catalogue and live stock but can never write through a tool.
+
+Honesty about stock is the point of these tools (output/harness.md §2): stock is read live
+here, never baked into the system prompt, because 24% of size rows are out of stock.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+from pathlib import Path
+
+import display
+from models import ProductCard, SizeStock
+
+_SIZE_ORDER = "CASE size WHEN 'XS' THEN 1 WHEN 'S' THEN 2 WHEN 'M' THEN 3 WHEN 'L' THEN 4 WHEN 'XL' THEN 5 WHEN 'XXL' THEN 6 ELSE 7 END"
+_COLUMNS = "product_id, name, garment_type, description, colors, search_tags, image_file_path, price"
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _short(text: str, limit: int = 110) -> str:
+    first = text.split(". ")[0].strip().rstrip(".")
+    return first + "." if len(first) <= limit else first[:limit].rsplit(" ", 1)[0] + "…"
+
+
+def _stock(conn: sqlite3.Connection, product_id: str) -> list[SizeStock]:
+    rows = conn.execute(
+        f"SELECT size, quantity FROM inventory WHERE product_id = ? ORDER BY {_SIZE_ORDER}",
+        (product_id,),
+    ).fetchall()
+    return [SizeStock(size=r["size"], quantity=r["quantity"]) for r in rows]
+
+
+def _card(conn: sqlite3.Connection, row: sqlite3.Row) -> ProductCard:
+    stock = _stock(conn, row["product_id"])
+    return ProductCard(
+        product_id=row["product_id"],
+        product_name=display.product_name(row["name"]),
+        garment_type=display.garment_type(row["garment_type"]),
+        price=row["price"],
+        image_url=f"/media/{row['image_file_path']}",
+        short_description=_short(row["description"]),
+        colors=json.loads(row["colors"]),
+        total_stock=sum(s.quantity for s in stock),
+        sizes_in_stock=[s.size for s in stock if s.quantity > 0],
+        sizes_out=[s.size for s in stock if s.quantity == 0],
+    )
+
+
+def search_products(db_path: Path, query: str, max_results: int = 6) -> list[ProductCard]:
+    """Find catalogue products matching free-text words against name, type, description,
+    colours and search_tags. Ranks by how many query words a product matches.
+
+    Searching name+description+search_tags is deliberate: it is a strict superset of the
+    messy garment_type labels (output/harness.md finding 2), so no product is missed to a
+    label inconsistency."""
+    words = [w.lower() for w in query.split() if len(w) > 1]
+    if not words:
+        return []
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(f"SELECT {_COLUMNS} FROM catalogue").fetchall()
+        scored = []
+        for row in rows:
+            haystack = " ".join([
+                row["name"], row["garment_type"], row["description"],
+                row["colors"], row["search_tags"],
+            ]).lower()
+            score = sum(1 for w in words if w in haystack)
+            if score:
+                scored.append((score, row))
+        scored.sort(key=lambda sr: sr[0], reverse=True)
+        return [_card(conn, row) for _, row in scored[:max_results]]
+    finally:
+        conn.close()
+
+
+def get_product(db_path: Path, product_id: str) -> ProductCard | None:
+    """Full card for one product, including live per-size stock."""
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(f"SELECT {_COLUMNS} FROM catalogue WHERE product_id = ?", (product_id,)).fetchone()
+        return _card(conn, row) if row else None
+    finally:
+        conn.close()
+
+
+def check_stock(db_path: Path, product_id: str) -> dict | None:
+    """Live per-size stock for one product. None if the product id is unknown."""
+    conn = _connect(db_path)
+    try:
+        row = conn.execute("SELECT name FROM catalogue WHERE product_id = ?", (product_id,)).fetchone()
+        if row is None:
+            return None
+        stock = _stock(conn, product_id)
+        return {
+            "product_id": product_id,
+            "product_name": display.product_name(row["name"]),
+            "sizes": {s.size: s.quantity for s in stock},
+            "total": sum(s.quantity for s in stock),
+        }
+    finally:
+        conn.close()
+
+
+def list_categories(db_path: Path) -> dict[str, float]:
+    """Price-tier categories (the L1 taxonomy, output/harness.md §3): seven real
+    categories derived from the flat per-category price, each mapped to that price."""
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute("SELECT DISTINCT price FROM catalogue ORDER BY price").fetchall()
+    finally:
+        conn.close()
+    labels = {32: "T-shirt", 45: "Lightweight / performance", 58: "Crewneck sweatshirt",
+              68: "Hoodie", 72: "Quarter-zip", 88: "Full-zip hoodie", 98: "Jacket"}
+    return {labels.get(int(r["price"]), f"${r['price']:.0f} items"): r["price"] for r in rows}

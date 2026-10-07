@@ -25,13 +25,24 @@ async function get<T>(path: string): Promise<T> {
 export const fetchProducts = () => get<ProductSummary[]>('/api/products')
 export const fetchProduct = (id: string) => get<ProductDetail>(`/api/products/${id}`)
 
-export async function sendChatMessage(message: string): Promise<ChatReply> {
+export async function sendChatMessage(
+  message: string,
+  history: { role: 'user' | 'assistant'; content: string }[],
+  token?: string,
+): Promise<ChatReply> {
   const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message, history }),
   })
-  if (!res.ok) throw new ApiError(res.status, res.statusText)
+  if (!res.ok) {
+    let detail = res.statusText
+    try { detail = (await res.json()).detail ?? detail } catch { /* non-JSON */ }
+    throw new ApiError(res.status, detail)
+  }
   return res.json()
 }
 

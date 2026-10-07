@@ -36,8 +36,10 @@ Problem 3 does not make AI calls).
 Two terminals:
 
 ```bash
-.venv/bin/python -m uvicorn backend.main:app --reload --port 8010
+cd backend && uvicorn main:app --reload --port 8000
 ```
+(On a machine where port 8000 is busy, use another port and set `VITE_API_TARGET`
+in a git-ignored `.env.local` so the front end's proxy follows.)
 
 ```bash
 npm --prefix frontend run dev
@@ -55,6 +57,8 @@ course occupy. Vite proxies `/api` and `/media` to the backend, so the browser s
 | 1 — Vibe coder prompts | [`AI_prompts.md`](AI_prompts.md) |
 | 2 — Analyse the database | [`explore_db.py`](explore_db.py), [`field_evidence.py`](field_evidence.py) → [`output/data_exploration.md`](output/data_exploration.md), [`output/field_evidence.md`](output/field_evidence.md), [`output/harness.md`](output/harness.md) |
 | 3 — Build the website | [`frontend/`](frontend), [`backend/main.py`](backend/main.py) |
+| 4 — Accounts & login | [`backend/auth.py`](backend/auth.py), [`backend/security.py`](backend/security.py), [`frontend/src/pages/Auth.tsx`](frontend/src/pages/Auth.tsx) |
+| 5 — PydanticAI agent | [`backend/agent.py`](backend/agent.py), [`backend/tools.py`](backend/tools.py), [`backend/models.py`](backend/models.py), [`backend/prompts/prompt.md`](backend/prompts/prompt.md) |
 
 ## Layout
 
@@ -64,6 +68,7 @@ frontend/src/
 ├── api.ts               typed fetch client
 ├── types.ts             mirrors the Pydantic models
 ├── components/          NavBar, Footer, ChatPanel (floating, bottom-right)
+│   └── auth.tsx         client auth state (session token)
 └── pages/               Home, Products, ProductDetail, About, Auth
 explore_db.py            regenerates output/data_exploration.md
 field_evidence.py        regenerates output/field_evidence.md
@@ -75,8 +80,9 @@ output/harness.md        the running build harness (data dictionary, decisions)
 - **Images are served at `/media/products/<slug>.jpg`.** That convention was reverse-engineered
   from the `image_url` field in the seeded `chat_messages.products_json`, where it appears
   despite not existing in any table.
-- **The chat is a stub.** It calls a real endpoint (`POST /api/chat`) and renders a real round
-  trip, but returns a fixed reply and no products. The agent arrives in Problem 5.
+- **The chat is a real PydanticAI agent** (Problem 5) behind `POST /api/chat`. It answers from the
+  catalogue and live stock via read-only DB tools, shows matching product cards, and greets a
+  signed-in shopper by name. Model and prompt load from `.env` and `backend/prompts/prompt.md`.
 - **Log in / create account are forms only.** No authentication is wired up yet.
 - **Site copy is original.** Facts about Campus Customs (official licensing, the 57 Broadway
   storefront, the breadth of the range) were researched from yalebulldogblue.com; the wording

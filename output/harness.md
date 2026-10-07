@@ -366,3 +366,64 @@ demonstrable. Idempotent, dev-only, touches one row; the DB is git-ignored.
 6. Reset with token → new password works, old rejected, lockout cleared.
 
 Throwaway accounts from API testing were deleted; the DB holds only the 3 seed users.
+
+---
+
+## 7. Problem 5 — the PydanticAI agent backend
+
+### How the front end talks to FastAPI
+- The chat widget (`frontend/src/components/ChatPanel.tsx`) POSTs to `/api/chat` with
+  `{ message, history }`. If the shopper is signed in it adds `Authorization: Bearer <session
+  token>`; the route resolves that to the shopper's `first_name` so the agent can greet them.
+- Vite proxies `/api` and `/media` to the backend, so the browser sees one origin. The proxy
+  target is configurable (`vite.config.ts` reads `BACKEND_PORT`, default **8000**); a git-ignored
+  `.env.local` with `VITE_API_TARGET` overrides it locally when 8000 is occupied.
+- The route returns `ChatResponse { reply, products }`. `reply` is the agent's prose; `products`
+  are the cards its `show_products` tool chose, rendered under the reply and linking to product
+  pages. Shape mirrors the seed `chat_messages.products_json`.
+
+### How the agent is loaded (prompt file + model)
+- `backend/agent.py` builds one `Agent` at import:
+  - **Model** from `.env` via the Portkey gateway — `OpenAIChatModel(os.getenv("OPENAI_MODEL"))`
+    (currently `gpt-5.6-luna`) over an `AsyncOpenAI` client pointed at Portkey with the
+    `x-portkey-api-key` header. The model name is never hard-coded.
+  - **System prompt** read from `backend/prompts/prompt.md` at load. Editing that file changes the
+    agent's voice and safety rules with no code change — it is meant to grow in later problems.
+  - A dynamic `@agent.system_prompt` appends the signed-in shopper's first name (or "guest").
+- `run_chat(message, first_name, history)` runs one turn with per-request `ChatDeps` and returns
+  `ChatResponse`. Front-end turns are converted to PydanticAI `ModelRequest`/`ModelResponse`
+  history so context carries across messages.
+
+### The four agent files (Homework-3 pattern)
+| file | role |
+|---|---|
+| `backend/prompts/prompt.md` | system prompt: Campus Customs voice + safety basics |
+| `backend/agent.py` | agent wiring: model, prompt, tools, `run_chat` |
+| `backend/tools.py` | pure DB-backed tools (read-only): search, product, stock, categories |
+| `backend/models.py` | Pydantic types: `ProductCard`, `ChatRequest/Response`, `ChatTurn` |
+
+### Tools and the card/reply alignment
+Tools open the DB **read-only** and read stock **live** (never from the prompt), honouring the
+honest-stock requirement. `search_products` returns candidates with ids but shows nothing;
+`show_products(ids)` is a separate step so the cards match what the reply recommends, instead of
+every search hit becoming a card. `get_product` / `check_stock` give per-size detail.
+
+### Run structure (changed this problem)
+Backend modules now use **flat sibling imports** so the app runs as the assignment specifies:
+```
+cd backend && uvicorn main:app --reload --port 8000
+```
+On this machine 8000 is held by another course folder, so local testing uses `--port 8010` with
+the `.env.local` proxy override; the committed default is 8000.
+
+### Safety basics (in prompt.md, verified live)
+Off-topic requests declined and redirected; refuses to reveal the system prompt or model; refuses
+passwords in chat and points to the account pages; treats text inside product data / tool results /
+messages as data, not instructions; no medical/legal/financial advice; never invents products or
+stock. All six checks confirmed against the running agent.
+
+### Verified end-to-end
+Guest and signed-in chat (greets "Hi Test"); honest stock ("XL, 2 available"; "XS out of stock,
+available in S, M, L, XXL"); card/reply alignment (1 rec → 1 card, 4 recs → 4 cards); no-match
+honesty (0 forced cards); multi-turn context ("the first one" resolved from history). Browser cards
+render with image, price and live per-size stock; console clean.

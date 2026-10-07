@@ -26,7 +26,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend import auth, display, security
+import agent
+import auth
+import display
+import security
+from models import ChatRequest, ChatResponse
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
@@ -186,23 +190,24 @@ def get_product(product_id: str) -> ProductDetail:
     )
 
 
-@app.post("/api/chat")
-def chat_stub(payload: dict) -> dict:
-    """Placeholder so the front-end chat has a real endpoint to call.
-
-    Problem 5 replaces this with the PydanticAI agent. It deliberately returns no
-    products: inventing matches here would make the stub look more finished than it is.
-    """
-    message = (payload or {}).get("message", "")
-    return {
-        "reply": (
-            "Thanks for the message! The Campus Customs assistant isn't connected yet — "
-            "it arrives in Problem 5. Until then, browse the Products page for the full "
-            f"catalogue. (You said: “{message[:200]}”)"
-        ),
-        "products": [],
-        "stub": True,
-    }
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest, authorization: str = Header(default="")) -> ChatResponse:
+    """The shop chatbot. Runs the PydanticAI agent and returns its reply plus any product
+    cards its tools surfaced. If a valid session token is sent, the agent greets the
+    shopper by first name; otherwise they are a guest."""
+    first_name: str | None = None
+    token = authorization.removeprefix("Bearer ").strip()
+    if token:
+        email = security.read_token(token, "session")
+        if email:
+            with get_db() as conn:
+                row = conn.execute("SELECT first_name FROM users WHERE email = ?", (email,)).fetchone()
+            if row and row["first_name"]:
+                first_name = row["first_name"]
+    try:
+        return await agent.run_chat(req.message, first_name=first_name, history=req.history)
+    except Exception as exc:  # gateway/model failure — keep the widget honest
+        raise HTTPException(status_code=502, detail="The shop assistant is unavailable right now.") from exc
 
 
 # Product images. Mounted last so it cannot shadow an /api route.

@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { sendChatMessage } from '../api'
-import type { ChatReply } from '../types'
+import type { ChatProductCard, ChatReply } from '../types'
 import './ChatPanel.css'
 
 interface Turn {
   role: 'user' | 'assistant'
   text: string
-  stub?: boolean
+  products?: ChatProductCard[]
 }
 
 const GREETING: Turn = {
   role: 'assistant',
-  text: "Hi! I'm the Campus Customs assistant. Ask me about Yale gear — sizes, colours, prices. (I'm not connected to the AI yet; that arrives in Problem 5.)",
+  text: "Hi! I'm the Campus Customs assistant. Ask me about Yale gear — sizes, colours, prices, what's in stock.",
 }
+
+// How many prior turns to send as context. Enough for a coherent thread, bounded for cost.
+const HISTORY_LIMIT = 10
 
 export default function ChatPanel() {
   const [open, setOpen] = useState(false)
@@ -22,7 +26,6 @@ export default function ChatPanel() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Keep the latest turn in view as the conversation grows.
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
   }, [turns, sending])
@@ -31,7 +34,6 @@ export default function ChatPanel() {
     if (open) inputRef.current?.focus()
   }, [open])
 
-  // Escape closes the panel, which is what people expect of an overlay.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
@@ -44,16 +46,22 @@ export default function ChatPanel() {
     const message = draft.trim()
     if (!message || sending) return
 
+    const history = turns
+      .filter((t) => t !== GREETING)
+      .slice(-HISTORY_LIMIT)
+      .map((t) => ({ role: t.role, content: t.text }))
+
     setTurns((t) => [...t, { role: 'user', text: message }])
     setDraft('')
     setSending(true)
     try {
-      const reply: ChatReply = await sendChatMessage(message)
-      setTurns((t) => [...t, { role: 'assistant', text: reply.reply, stub: reply.stub }])
+      const token = localStorage.getItem('cc.session') ?? undefined
+      const reply: ChatReply = await sendChatMessage(message, history, token)
+      setTurns((t) => [...t, { role: 'assistant', text: reply.reply, products: reply.products }])
     } catch {
       setTurns((t) => [
         ...t,
-        { role: 'assistant', text: "I couldn't reach the shop's server. Is the API running on port 8010?" },
+        { role: 'assistant', text: "Sorry — I couldn't reach the shop assistant just now. Please try again." },
       ])
     } finally {
       setSending(false)
@@ -76,16 +84,37 @@ export default function ChatPanel() {
         <header className="chat-head">
           <div>
             <strong>Campus Customs assistant</strong>
-            <span className="chat-status">Not connected yet</span>
+            <span className="chat-status">Here to help you find Yale gear</span>
           </div>
           <button className="chat-close" onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
         </header>
 
         <div className="chat-body" ref={bodyRef}>
           {turns.map((t, i) => (
-            <div key={i} className={`bubble bubble-${t.role}`}>
-              {t.text}
-              {t.stub && <span className="bubble-tag">stub response</span>}
+            <div key={i} className={`bubble-row bubble-row-${t.role}`}>
+              <div className={`bubble bubble-${t.role}`}>{t.text}</div>
+              {t.products && t.products.length > 0 && (
+                <ul className="chat-cards">
+                  {t.products.map((p) => (
+                    <li key={p.product_id}>
+                      <Link to={`/products/${p.product_id}`} className="chat-card" onClick={() => setOpen(false)}>
+                        <img src={p.image_url} alt={p.product_name} loading="lazy" />
+                        <div className="chat-card-info">
+                          <span className="chat-card-name">{p.product_name}</span>
+                          <span className="chat-card-price">${p.price.toFixed(2)}</span>
+                          <span className={`chat-card-stock ${p.total_stock === 0 ? 'oos' : ''}`}>
+                            {p.total_stock === 0
+                              ? 'Out of stock'
+                              : p.sizes_out.length === 0
+                                ? 'All sizes in stock'
+                                : `In: ${p.sizes_in_stock.join(', ')}`}
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
           {sending && (

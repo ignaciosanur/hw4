@@ -102,3 +102,23 @@
 }
 .chat-form input:focus { outline: 2px solid var(--yale-blue-light); outline-offset: -1px; }
 .chat-form .btn { padding: 0.6rem 1rem; font-size: 0.9rem; }
+
+.bubble-row { display: flex; flex-direction: column; gap: 0.5rem; }
+.bubble-row-user { align-items: flex-end; }
+.bubble-row-assistant { align-items: flex-start; }
+.bubble-row .bubble { max-width: 85%; }
+
+.chat-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+.chat-card {
+  display: flex; gap: 0.7rem; align-items: center;
+  padding: 0.5rem; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; color: inherit; box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.chat-card:hover { text-decoration: none; box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.chat-card img { width: 52px; height: 52px; object-fit: contain; background: var(--surface-alt); border-radius: 6px; flex-shrink: 0; }
+.chat-card-info { display: flex; flex-direction: column; min-width: 0; }
+.chat-card-name { font-weight: 600; font-size: 0.85rem; line-height: 1.2; }
+.chat-card-price { color: var(--accent); font-weight: 700; font-size: 0.85rem; }
+.chat-card-stock { font-size: 0.72rem; color: #1f6b35; }
+.chat-card-stock.oos { color: #9b2222; }

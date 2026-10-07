@@ -24,10 +24,22 @@ export interface ProductDetail extends ProductSummary {
   total_stock: number
 }
 
+export interface ChatProductCard {
+  product_id: string
+  product_name: string
+  garment_type: string
+  price: number
+  image_url: string
+  short_description: string
+  colors: string[]
+  total_stock: number
+  sizes_in_stock: string[]
+  sizes_out: string[]
+}
+
 export interface ChatReply {
   reply: string
-  products: ProductSummary[]
-  stub?: boolean
+  products: ChatProductCard[]
 }
 
 export interface UserPublic {
