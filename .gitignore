@@ -1,0 +1,17 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+
+# --- HW4: NEVER commit the database or product images ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+data.zip
+node_modules/
+dist/
+.vite/
+.DS_Store

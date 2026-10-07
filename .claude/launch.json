@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "campus-customs-api",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "backend.main:app", "--reload", "--port", "8010"],
+      "port": 8010
+    },
+    {
+      "name": "campus-customs-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "port": 5183
+    }
+  ]
+}

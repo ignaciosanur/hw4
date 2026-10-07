@@ -1,0 +1,12 @@
+.about { max-width: 760px; }
+.about .lede { font-size: 1.15rem; color: var(--ink-soft); margin-bottom: 2.5rem; }
+.about section { margin-bottom: 2.25rem; }
+.about h2 { font-size: 1.25rem; color: var(--yale-blue); }
+.about p { margin: 0 0 0.9rem; }
+.footnote {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}

@@ -1,0 +1,74 @@
+.crumbs { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 1.5rem; }
+.crumbs span { margin: 0 0.4rem; }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; align-items: start; }
+@media (max-width: 820px) { .detail { grid-template-columns: 1fr; gap: 2rem; } }
+
+.detail-media {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  position: sticky;
+  top: 92px;
+}
+@media (max-width: 820px) { .detail-media { position: static; } }
+.detail-media img { width: 100%; height: auto; object-fit: contain; }
+
+.detail-type {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  margin: 0 0 0.5rem;
+}
+.detail-info h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 0.5rem; }
+.detail-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: 0 0 1.25rem; }
+.detail-desc { color: var(--ink-soft); margin: 0 0 2rem; }
+
+.detail-block { margin-bottom: 1.75rem; }
+.detail-block h2 {
+  font-family: var(--font);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin-bottom: 0.6rem;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
+.chips li {
+  font-size: 0.82rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+.chips-soft li { background: var(--surface-alt); color: var(--ink-soft); text-transform: none; font-size: 0.76rem; }
+
+.sizes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.size {
+  min-width: 52px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.size:hover:not(:disabled) { border-color: var(--yale-blue); }
+.size.is-selected { background: var(--yale-blue); color: #fff; border-color: var(--yale-blue); }
+.size.is-out {
+  color: var(--ink-soft);
+  background: var(--surface-alt);
+  cursor: not-allowed;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.stock-line { margin: 0.9rem 0 0; font-size: 0.9rem; }
+.detail-cta { width: 100%; margin-top: 0.5rem; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 0.8rem; margin-top: 0.5rem; }
