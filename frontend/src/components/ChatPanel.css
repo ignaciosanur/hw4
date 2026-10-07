@@ -135,3 +135,11 @@
   box-shadow: var(--shadow-sm);
 }
 .chat-onpage:hover { background: var(--yale-blue-dark); text-decoration: none; }
+
+/* Rendered markdown inside assistant bubbles */
+.bubble .md-p { margin: 0 0 0.5rem; }
+.bubble .md-p:last-child { margin-bottom: 0; }
+.bubble .md-list { margin: 0.25rem 0 0.5rem; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.bubble .md-list:last-child { margin-bottom: 0; }
+.bubble .md-list li { line-height: 1.45; }
+.bubble strong { font-weight: 700; }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useChatResults } from '../chatResults'
+import Markdown from './Markdown'
 import { sendChatMessage } from '../api'
 import type { ChatProductCard, ChatReply } from '../types'
 import './ChatPanel.css'
@@ -101,7 +102,9 @@ export default function ChatPanel() {
         <div className="chat-body" ref={bodyRef}>
           {turns.map((t, i) => (
             <div key={i} className={`bubble-row bubble-row-${t.role}`}>
-              <div className={`bubble bubble-${t.role}`}>{t.text}</div>
+              <div className={`bubble bubble-${t.role}`}>
+                {t.role === 'assistant' ? <Markdown text={t.text} /> : t.text}
+              </div>
               {t.products && t.products.length > 0 && (
                 <Link to="/products" className="chat-onpage" onClick={() => setOpen(false)}>
                   🛍️ {t.products.length} {t.products.length === 1 ? 'item' : 'items'} shown on the page →

@@ -526,3 +526,9 @@ view as a catalogue card — verified in the browser.
 Asked "what hoodies do you have?" from the Home page → navigated to `/products`, grid showed 8
 hoodie cards under the banner; clicking a chat-placed card opened its detail page ($68.00, sizes,
 large image); "Show all products" restored the full 102. Console clean.
+
+### 9.1 Chat reply formatting (follow-up)
+The bubble rendered replies as plain text, so markdown showed as raw `**`/`-`. Added
+`Markdown.tsx` — a minimal safe renderer (bold, bullets, line breaks as React nodes, no
+`dangerouslySetInnerHTML`). The prompt was also tightened so that, with cards on the page, the
+chat reply is one or two short sentences and does not repeat the product list or prices.

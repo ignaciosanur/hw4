@@ -320,3 +320,17 @@ format using the password the assignment provided.
 - **One card component everywhere** (`ProductGridCard`), so catalogue and chat-placed cards look
   identical and both open the Problem 3 detail page by `product_id`.
 - **A "Show all products" clear** returns the grid to the full catalogue.
+
+### Follow-up prompt
+
+> the products in the chat show as some weird text that's not appealing, with symbols and stuff
+
+What was lacking after the first: the chat bubble rendered the agent's reply as plain text, so its
+markdown (`**bold**`, `-` bullets) showed as literal asterisks and dashes, and the agent still
+re-listed every product with prices even though the cards are now on the page.
+
+- **Added a small safe markdown renderer** (`Markdown.tsx`) for assistant bubbles — bold, bullet
+  lists and line breaks become real elements (built as React nodes, no `dangerouslySetInnerHTML`).
+- **Tightened the prompt**: when products are shown on the page, the chat reply is one or two
+  short sentences that point to the page and do not repeat the list or prices; markdown is used
+  sparingly.
