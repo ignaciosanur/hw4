@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { fetchProduct } from '../api'
-import type { ProductDetail as Product } from '../types'
+import { fetchProduct, fetchRelated } from '../api'
+import ProductGridCard from '../components/ProductGridCard'
+import type { ProductDetail as Product, ProductSummary } from '../types'
 import './ProductDetail.css'
 
 /** Low-stock threshold — below this we warn rather than simply saying "in stock". */
@@ -18,6 +19,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [related, setRelated] = useState<ProductSummary[]>([])
 
   useEffect(() => {
     if (!productId) return
@@ -27,6 +29,7 @@ export default function ProductDetail() {
     fetchProduct(productId)
       .then(setProduct)
       .catch((e: Error) => setError(e.message))
+    fetchRelated(productId).then(setRelated).catch(() => setRelated([]))
   }, [productId])
 
   if (error) {
@@ -118,6 +121,15 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      {related.length > 0 && (
+        <section className="related">
+          <h2>You might also like</h2>
+          <ul className="grid related-grid">
+            {related.map((p) => <li key={p.product_id}><ProductGridCard product={p} /></li>)}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

@@ -72,3 +72,7 @@
 .detail-cta { width: 100%; margin-top: 0.5rem; }
 .muted { color: var(--ink-soft); }
 .small { font-size: 0.8rem; margin-top: 0.5rem; }
+
+.related { margin-top: 3.5rem; border-top: 1px solid var(--line); padding-top: 2rem; }
+.related h2 { font-size: 1.3rem; margin-bottom: 1.25rem; }
+.related-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }

@@ -113,6 +113,21 @@ def search_products(ctx: RunContext[ChatDeps], query: str, max_results: int = 8)
 
 
 @agent.tool
+def filter_products(ctx: RunContext[ChatDeps], category: str | None = None,
+                    max_price: float | None = None, color: str | None = None,
+                    size_in_stock: str | None = None) -> list[ProductMatch]:
+    """Filter the catalogue by explicit constraints — category (hoodie, crewneck, t-shirt,
+    quarter-zip, jacket, …), maximum price, a colour, and/or a size that must be in stock.
+    Prefer this over search_products for precise asks like "navy hoodies under $70 in XL":
+    it returns only products that meet every constraint, read live from the database. Then
+    call show_products with the ids you recommend."""
+    return tools.filter_catalogue(
+        ctx.deps.db_path, category=category, max_price=max_price,
+        color=color, size_in_stock=size_in_stock,
+    )
+
+
+@agent.tool
 def lookup_product(ctx: RunContext[ChatDeps], product_id: str) -> ProductInfo | str:
     """Get one product's description, price and colours by its product_id. Use this for any
     question about what a product is, its price, or its colours — never answer from memory."""

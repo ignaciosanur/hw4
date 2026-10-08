@@ -82,10 +82,12 @@ class ProductSummary(BaseModel):
     product_id: str
     product_name: str
     garment_type: str
+    category: str          # L1 price-tier category, for the storefront filter (harness §3)
     price: float
     image_url: str
     short_description: str
     colors: list[str]
+    total_stock: int       # lets the grid filter "in stock only" and badge availability
 
 
 class ProductDetail(ProductSummary):
@@ -134,17 +136,30 @@ def image_url(image_file_path: str) -> str:
     return f"/media/{image_file_path}"
 
 
-def to_summary(row: sqlite3.Row) -> ProductSummary:
+# L1 price-tier categories (output/harness.md §3): price is flat within a real category.
+CATEGORY_BY_PRICE = {
+    32: "T-shirt", 45: "Lightweight / performance", 58: "Crewneck sweatshirt",
+    68: "Hoodie", 72: "Quarter-zip", 88: "Full-zip hoodie", 98: "Jacket",
+}
+
+
+def category_for(price: float) -> str:
+    return CATEGORY_BY_PRICE.get(int(price), "Other")
+
+
+def to_summary(row: sqlite3.Row, total_stock: int = 0) -> ProductSummary:
     return ProductSummary(
         product_id=row["product_id"],
         # Display formatting only; the stored text is untouched so the agent can still
         # match against it verbatim (see backend/display.py).
         product_name=display.product_name(row["name"]),
         garment_type=display.garment_type(row["garment_type"]),
+        category=category_for(row["price"]),
         price=row["price"],
         image_url=image_url(row["image_file_path"]),
         short_description=short(row["description"]),
         colors=json.loads(row["colors"]),
+        total_stock=total_stock,
     )
 
 
@@ -162,7 +177,33 @@ def health() -> dict:
 def list_products() -> list[ProductSummary]:
     with get_db() as conn:
         rows = conn.execute(f"SELECT {CATALOGUE_COLUMNS} FROM catalogue ORDER BY name").fetchall()
-    return [to_summary(r) for r in rows]
+        stock = dict(conn.execute(
+            "SELECT product_id, SUM(quantity) FROM inventory GROUP BY product_id"
+        ).fetchall())
+    return [to_summary(r, stock.get(r["product_id"], 0)) for r in rows]
+
+
+@app.get("/api/products/{product_id}/related", response_model=list[ProductSummary])
+def related_products(product_id: str, limit: int = 4) -> list[ProductSummary]:
+    """Products a shopper might also like: same category (price tier) first, then shared
+    search tags, excluding the product itself and anything fully out of stock."""
+    with get_db() as conn:
+        target = conn.execute(
+            "SELECT price, search_tags FROM catalogue WHERE product_id = ?", (product_id,)
+        ).fetchone()
+        if target is None:
+            raise HTTPException(status_code=404, detail=f"No product '{product_id}'")
+        rows = conn.execute(f"SELECT {CATALOGUE_COLUMNS} FROM catalogue WHERE product_id != ?", (product_id,)).fetchall()
+        stock = dict(conn.execute("SELECT product_id, SUM(quantity) FROM inventory GROUP BY product_id").fetchall())
+
+    tags = set(json.loads(target["search_tags"]))
+    def score(row: sqlite3.Row) -> int:
+        s = 3 if row["price"] == target["price"] else 0            # same category weighs most
+        s += len(tags & set(json.loads(row["search_tags"])))        # shared tags
+        return s
+    candidates = [r for r in rows if stock.get(r["product_id"], 0) > 0]
+    candidates.sort(key=score, reverse=True)
+    return [to_summary(r, stock.get(r["product_id"], 0)) for r in candidates[:limit]]
 
 
 @app.get("/api/products/{product_id}", response_model=ProductDetail)
@@ -182,13 +223,34 @@ def get_product(product_id: str) -> ProductDetail:
         ).fetchall()
 
     inventory = [SizeStock(size=s["size"], quantity=s["quantity"]) for s in stock]
+    total = sum(i.quantity for i in inventory)
+    # to_summary already sets total_stock, so don't pass it again (would duplicate the kwarg).
     return ProductDetail(
-        **to_summary(row).model_dump(),
+        **to_summary(row, total).model_dump(),
         description=row["description"],
         search_tags=json.loads(row["search_tags"]),
         inventory=inventory,
-        total_stock=sum(i.quantity for i in inventory),
     )
+
+
+# Tokenomics: cache answers to repeated identical GUEST questions so we do not pay the
+# model twice for the same thing. Only guests with no page context and a fresh thread are
+# cached (nothing personal or context-specific), and the TTL is short so stock stays honest.
+import time as _time
+
+_GUEST_CACHE: dict[str, tuple[float, ChatResponse]] = {}
+_GUEST_CACHE_TTL = 120  # seconds
+
+
+def _guest_cache_get(message: str) -> ChatResponse | None:
+    hit = _GUEST_CACHE.get(message.strip().lower())
+    if hit and _time.time() - hit[0] < _GUEST_CACHE_TTL:
+        return hit[1]
+    return None
+
+
+def _guest_cache_put(message: str, response: ChatResponse) -> None:
+    _GUEST_CACHE[message.strip().lower()] = (_time.time(), response)
 
 
 def _user_from_token(authorization: str) -> dict | None:
@@ -215,6 +277,14 @@ async def chat(req: ChatRequest, authorization: str = Header(default="")) -> Cha
     is saved to their own history; guests can chat but nothing is persisted."""
     user = _user_from_token(authorization)
     product_id = req.page_context.product_id if req.page_context else None
+
+    # Serve repeated identical guest questions from cache (tokenomics) — no model call.
+    cacheable = user is None and product_id is None and not req.history
+    if cacheable:
+        cached = _guest_cache_get(req.message)
+        if cached is not None:
+            return cached
+
     try:
         result = await agent.run_chat(
             req.message,
@@ -231,6 +301,8 @@ async def chat(req: ChatRequest, authorization: str = Header(default="")) -> Cha
     if user:
         history.save_turn(user["id"], "user", req.message)
         history.save_turn(user["id"], "assistant", result.reply, result.products)
+    elif cacheable:
+        _guest_cache_put(req.message, result)
     return result
 
 

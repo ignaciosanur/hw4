@@ -11,10 +11,12 @@ export interface ProductSummary {
   product_id: string
   product_name: string
   garment_type: string
+  category: string
   price: number
   image_url: string
   short_description: string
   colors: string[]
+  total_stock: number
 }
 
 export interface ProductDetail extends ProductSummary {

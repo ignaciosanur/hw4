@@ -24,6 +24,7 @@ async function get<T>(path: string): Promise<T> {
 
 export const fetchProducts = () => get<ProductSummary[]>('/api/products')
 export const fetchProduct = (id: string) => get<ProductDetail>(`/api/products/${id}`)
+export const fetchRelated = (id: string) => get<ProductSummary[]>(`/api/products/${id}/related`)
 
 export async function sendChatMessage(
   message: string,

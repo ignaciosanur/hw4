@@ -365,3 +365,36 @@ re-listed every product with prices even though the cards are now on the page.
   the URL; a dynamic system prompt resolves "this"/"it" to that product.
 - **Guests chat but are never persisted** (chat_messages.user_id is NOT NULL; the route only writes
   for a resolved user), with the sales-only guardrail retained.
+
+---
+
+## Problem 9: Usability Improvements
+
+### Initial prompt
+
+> now that the core shop works, we want to improve it.  Choose and implement:
+>
+> * two front-ned usability imrpovements
+> * 2 agent / backend usability imoprovements
+>
+> front-end improvemns tare things that make the site look better and make it easier to use.
+> Agent / backend imrpvoements are things tha tmke the agent output better, more accurate, or safer. These could be new agent tools or things that mek the agent run faster or cheaper (think of tokenomics and what we learnesd in the lectures).
+>
+> We want to write output/usability.md before or as you build. For each of the impreovements, say: what we added; why it helps a campus customs shopper or the business
+>
+> then make sure that all improvements actually show up in the running app. Graders will read the write-up and look for the features
+
+### What we worked out before building
+
+- **Wrote output/usability.md first** (as asked), then built to it.
+- **FE1 Browse controls** (category chips from the L1 taxonomy + live search + in-stock toggle +
+  sort) — finally puts the parked Problem 2 taxonomy to work on the storefront.
+- **FE2 "You might also like"** related products on the detail page (same category / shared tags,
+  in stock) — cross-sell and a rescue when a size is out.
+- **BE1 `filter_products` tool** — structured, precise filtering for constrained asks, more
+  accurate than free-text search.
+- **BE2 Guest response caching** — the lectures' tokenomics point: don't pay the model twice.
+  Repeated identical guest questions serve from a 120s cache (verified 5.6s → 0.03s, zero tokens);
+  signed-in and context-specific chats always run fresh.
+- A duplicate-kwarg bug (adding total_stock to ProductSummary made the detail route pass it twice)
+  surfaced as a 500 on the detail page and was fixed before finishing.

@@ -90,6 +90,65 @@ def search_catalogue(db_path: Path, query: str, max_results: int = 8) -> list[Pr
         conn.close()
 
 
+# L1 price-tier categories (output/harness.md §3) for structured filtering.
+_CATEGORY_PRICE = {
+    "t-shirt": 32.0, "lightweight": 45.0, "performance": 45.0, "crewneck": 58.0,
+    "hoodie": 68.0, "quarter-zip": 72.0, "full-zip hoodie": 88.0, "jacket": 98.0,
+}
+
+
+def filter_catalogue(db_path: Path, *, category: str | None = None, max_price: float | None = None,
+                     color: str | None = None, size_in_stock: str | None = None,
+                     max_results: int = 12) -> list[ProductMatch]:
+    """Structured catalogue filter: return only products meeting every constraint given.
+
+    - category: a price-tier name (hoodie, crewneck, t-shirt, quarter-zip, jacket, …)
+    - max_price: products at or below this price
+    - color: a colour that must be in the product's colour list
+    - size_in_stock: a size that must have quantity > 0
+    More precise than free-text search for constrained asks ("navy hoodies under $70 in XL")."""
+    cat_price = None
+    if category:
+        key = category.strip().lower()
+        for name, price in _CATEGORY_PRICE.items():
+            if name in key or key in name:
+                cat_price = price
+                break
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(f"SELECT {_COLUMNS} FROM catalogue").fetchall()
+        out: list[ProductMatch] = []
+        for row in rows:
+            if cat_price is not None and row["price"] != cat_price:
+                continue
+            if max_price is not None and row["price"] > max_price:
+                continue
+            if color and color.strip().lower() not in [c.lower() for c in json.loads(row["colors"])]:
+                continue
+            total = conn.execute(
+                "SELECT COALESCE(SUM(quantity),0) FROM inventory WHERE product_id = ?", (row["product_id"],)
+            ).fetchone()[0]
+            if size_in_stock:
+                q = conn.execute(
+                    "SELECT COALESCE(SUM(quantity),0) FROM inventory WHERE product_id = ? AND size = ?",
+                    (row["product_id"], size_in_stock.strip().upper()),
+                ).fetchone()[0]
+                if q <= 0:
+                    continue
+            out.append(ProductMatch(
+                product_id=row["product_id"],
+                product_name=display.product_name(row["name"]),
+                garment_type=display.garment_type(row["garment_type"]),
+                price=row["price"],
+                colors=json.loads(row["colors"]),
+                total_stock=total,
+            ))
+        out.sort(key=lambda m: m.price)
+        return out[:max_results]
+    finally:
+        conn.close()
+
+
 def lookup_product(db_path: Path, product_id: str) -> ProductInfo | None:
     """Full details for one product: description, price, colours. None if id is unknown."""
     conn = _connect(db_path)
