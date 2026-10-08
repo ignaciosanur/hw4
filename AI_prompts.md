@@ -426,3 +426,29 @@ re-listed every product with prices even though the cards are now on the page.
 - **Fixed the stock-ribbon threshold** after checking the data: lowest total stock is 9, so a
   ≤6 rule never fired; changed to a "Low stock" nudge at ≤15 so the feature is actually visible.
 - Everything honours prefers-reduced-motion.
+
+---
+
+## Problem 11: Site Testing (App Check)
+
+### Initial prompt
+
+> For problem 11: Site testing (app check)
+>
+> test the live site and document it in output/app_check.html (a page you can double-click to open). Include clear screenshots and short captions for:
+> 1. Chat checking the inventory level of an ite, (honest stock/price from the BD)
+> 2. The dynamic search-result cards appearing after a category question (e.g., hoodies)
+> 3. One of the usability features you added in Problem 9
+>
+> Make the HTML easy to grade, heading for each check, screenshot, one or two sentecnes on what the screenshot proves.
+> Put the screenshot image files in output/app_check_images/ and link them from app_check.html with relative paths.
+
+### What we worked out before building
+
+- **Captured real screenshots from the running app** (not mockups): a chat stock/price question, a
+  category question that updates the page, and the browse-controls usability feature.
+- **Chose the honest-stock example deliberately** — the Baseball Left Chest Crewneck in XL, which is
+  genuinely out of stock in the DB, so the screenshot proves the agent says "out of stock" truthfully.
+- **Self-contained page**: `output/app_check.html` with images in `output/app_check_images/` linked by
+  relative paths, so double-clicking the file just works. One heading + screenshot + "what it proves"
+  caption per check.

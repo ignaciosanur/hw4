@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Campus Customs — App Check (Problem 11)</title>
+<style>
+  :root { --navy:#00356b; --navy-dark:#002147; --gold:#c7a24a; --ink:#1b1b22; --soft:#5a5c66; --line:#e3e1da; --cream:#f7f3ea; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--cream); line-height:1.6; }
+  header { background:linear-gradient(135deg,var(--navy),var(--navy-dark)); color:#fff; padding:2.5rem 1.5rem; border-bottom:4px solid var(--gold); }
+  header .wrap { max-width:960px; margin:0 auto; }
+  header h1 { margin:0 0 .4rem; font-size:1.9rem; }
+  header p { margin:0; opacity:.9; }
+  main { max-width:960px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  .check { background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.5rem; margin-bottom:2rem; box-shadow:0 6px 20px rgb(10 20 40 / 8%); }
+  .check h2 { margin:0 0 .25rem; color:var(--navy); font-size:1.3rem; }
+  .check h2 .num { display:inline-grid; place-items:center; width:1.8rem; height:1.8rem; background:var(--navy); color:#fff; border-radius:50%; font-size:.95rem; margin-right:.5rem; vertical-align:middle; }
+  .proves { margin:.4rem 0 1rem; color:var(--soft); }
+  .check img { width:100%; height:auto; border:1px solid var(--line); border-radius:10px; display:block; }
+  figcaption { margin-top:.6rem; font-size:.9rem; color:var(--soft); }
+  footer { max-width:960px; margin:0 auto; padding:0 1.5rem 3rem; color:var(--soft); font-size:.85rem; }
+  code { background:var(--cream); padding:.1em .4em; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Campus Customs — Live App Check</h1>
+    <p>Homework 4, Problem 11. Each check below is a screenshot from the running site with a note on what it proves.</p>
+  </div>
+</header>
+
+<main>
+  <section class="check">
+    <h2><span class="num">1</span>Chat reports honest stock &amp; price from the database</h2>
+    <p class="proves">A shopper asks the assistant about a specific item and size. The reply comes from live database lookups, not guesses.</p>
+    <figure>
+      <img src="app_check_images/inventory.png" alt="Chat answering a stock and price question for the Baseball Left Chest Crewneck" />
+      <figcaption>
+        Asked whether the <strong>Baseball Left Chest Crewneck</strong> is available in XL and its price, the assistant replies
+        <em>“$58. XL is currently out of stock; available sizes are S, M, L, and XXL.”</em> This matches the database exactly
+        (price $58; XS and XL have zero stock) — proving the agent reads real price and per-size stock and states out-of-stock plainly instead of inventing availability.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="check">
+    <h2><span class="num">2</span>A category question updates the page with dynamic product cards</h2>
+    <p class="proves">Asking the chat about a product type renders the matching items on the storefront as clickable cards.</p>
+    <figure>
+      <img src="app_check_images/chat_search_cards.png" alt="Products page showing 12 hoodie cards under a 'From your chat' banner" />
+      <figcaption>
+        After asking <em>“what hoodies do you have?”</em> the page switched to the catalogue and rendered
+        <strong>12 hoodie cards</strong> under a “From your chat” banner — image, name, price and colour swatches. This proves the agent
+        returns structured matches and the front end renders them live on the site; each card opens its full detail page.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="check">
+    <h2><span class="num">3</span>Usability feature: browse controls (filter, search, sort)</h2>
+    <p class="proves">A Problem 9 improvement that makes 102 items easy to narrow down.</p>
+    <figure>
+      <img src="app_check_images/usability_filter.png" alt="Products page filtered to the Quarter-zip category with search and sort controls" />
+      <figcaption>
+        The Products page filtered to the <strong>Quarter-zip</strong> category (<code>11 of 102 items</code>), sorted by price, with a
+        live search box and an “In stock only” toggle. The category chips come from the price-tier taxonomy built in Problem 2.
+        This proves the browse controls work end to end and make the catalogue genuinely shoppable.
+      </figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer>
+  Generated for Problem 11. Screenshots live in <code>app_check_images/</code>. Open this file by double-clicking it.
+</footer>
+</body>
+</html>
