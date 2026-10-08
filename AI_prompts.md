@@ -337,7 +337,7 @@ re-listed every product with prices even though the cards are now on the page.
 
 ---
 
-## Problem 9: Customer Memory
+## Problem 8: Customer Memory
 
 ### Initial prompt
 

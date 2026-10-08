@@ -535,7 +535,7 @@ chat reply is one or two short sentences and does not repeat the product list or
 
 ---
 
-## 10. Problem 9 — customer memory
+## 10. Problem 8 — customer memory
 
 ### How chat history is stored
 Signed-in shoppers' turns are saved to the existing **`chat_messages`** table (the one the seed
