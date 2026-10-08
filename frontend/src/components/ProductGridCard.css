@@ -1,0 +1,18 @@
+/* Card polish: hover image zoom, colour swatches, stock ribbon.
+   Relies on the shared .card / .card-* rules in Products.css for base layout. */
+
+.card-media { position: relative; overflow: hidden; }
+.card-media img { transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.card:hover .card-media img { transform: scale(1.07); }
+
+.card-ribbon {
+  position: absolute; top: 0.6rem; left: 0.6rem;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 0.22em 0.6em; border-radius: 999px; box-shadow: var(--shadow-sm);
+}
+.card-ribbon-low { background: #fff4e2; color: #8a5215; }
+.card-ribbon-sold { background: #fdecec; color: #9b2222; }
+
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: auto; }
+.card-swatches { display: inline-flex; gap: 0.25rem; }
+.swatch { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgb(0 0 0 / 15%); display: inline-block; }

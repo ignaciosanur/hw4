@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchProducts } from '../api'
 import ProductGridCard from '../components/ProductGridCard'
 import { useChatResults } from '../chatResults'
@@ -17,6 +18,7 @@ export default function Products() {
   const [products, setProducts] = useState<ProductSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { results, query, clear } = useChatResults()
+  const [params] = useSearchParams()
 
   // Browse controls (FE1)
   const [search, setSearch] = useState('')
@@ -29,6 +31,12 @@ export default function Products() {
   useEffect(() => {
     fetchProducts().then(setProducts).catch((e: Error) => setError(e.message))
   }, [])
+
+  // Home's "shop by category" tiles link here with ?category=…; preselect that chip.
+  useEffect(() => {
+    const c = params.get('category')
+    if (c) setCategory(c)
+  }, [params])
 
   const categories = useMemo(() => {
     const present = new Set((products ?? []).map((p) => p.category))

@@ -60,3 +60,7 @@
 }
 
 .nav-greet { color: #fff; font-weight: 600; font-size: 0.9rem; align-self: center; }
+
+/* Gold detailing to tie the collegiate palette together */
+.brand-mark { border-color: var(--gold); }
+.nav-links a.active { border-bottom-color: var(--gold); }

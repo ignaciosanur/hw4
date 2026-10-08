@@ -398,3 +398,31 @@ re-listed every product with prices even though the cards are now on the page.
   signed-in and context-specific chats always run fresh.
 - A duplicate-kwarg bug (adding total_stock to ProductSummary made the detail route pass it twice)
   surfaced as a 500 on the detail page and was fixed before finishing.
+
+---
+
+## Problem 10: Style the Website
+
+### Initial prompt
+
+> So Problem 10: style the website
+>
+> We want to add creative designe so the sit efeels liek a eal Capus Customs storefront --fonts, color, hierachy, motion, product presentation, chat feel. Check 1-2 uni collegue wear websites for reference (idk, Harvard, Columbia) but use the Yale/campus customs apllete.
+>
+> the more innovative and imaginative, hte better.
+>
+> Write output/design.md: what you changed and hwy it should help customers stick around and buy. Keep it concrete and short
+
+### What we worked out before building
+
+- **Referenced The Harvard Shop** for collegiate-store patterns (announcement strip, shop-by-
+  category tiles, editorial pacing, product-card motion), rendered in the Yale navy palette with
+  a collegiate gold accent and cream for heritage warmth.
+- **Type system**: Fraunces (display serif) + Inter (UI sans) via Google Fonts, with offline
+  fallback to system stacks.
+- **New elements**: announcement/trust bar, redesigned hero with a faded "Y" motif, live
+  shop-by-category tiles (linking to the filtered Products page via ?category=), card polish
+  (hover zoom, colour swatches, low-stock ribbon), reveal-on-scroll motion, branded chat header.
+- **Fixed the stock-ribbon threshold** after checking the data: lowest total stock is 9, so a
+  ≤6 rule never fired; changed to a "Low stock" nudge at ≤15 so the feature is actually visible.
+- Everything honours prefers-reduced-motion.

@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import AnnouncementBar from './components/AnnouncementBar'
 import NavBar from './components/NavBar'
 import Footer from './components/Footer'
 import ChatPanel from './components/ChatPanel'
@@ -12,6 +13,7 @@ import ResetPassword from './pages/ResetPassword'
 export default function App() {
   return (
     <>
+      <AnnouncementBar />
       <NavBar />
       <main>
         <Routes>

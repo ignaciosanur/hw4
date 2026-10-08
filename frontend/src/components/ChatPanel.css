@@ -150,3 +150,26 @@
   font-size: 0.72rem; padding: 0.25rem 0.55rem; border-radius: 999px; cursor: pointer;
 }
 .chat-forget:hover { background: rgb(255 255 255 / 12%); }
+
+/* Branded chat header */
+.chat-head { gap: 0.7rem; }
+.chat-crest {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 34px; height: 34px; border: 2px solid rgb(255 255 255 / 70%);
+  border-radius: 8px; font-family: var(--serif); font-weight: 700; font-size: 0.85rem;
+}
+.chat-head-text { display: flex; flex-direction: column; }
+.chat-status { display: inline-flex; align-items: center; gap: 0.35rem; }
+.chat-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
+  box-shadow: 0 0 0 0 rgb(74 222 128 / 60%); animation: dotPulse 2s infinite;
+}
+@keyframes dotPulse {
+  0% { box-shadow: 0 0 0 0 rgb(74 222 128 / 55%); }
+  70% { box-shadow: 0 0 0 6px rgb(74 222 128 / 0%); }
+  100% { box-shadow: 0 0 0 0 rgb(74 222 128 / 0%); }
+}
+@media (prefers-reduced-motion: reduce) { .chat-dot { animation: none; } }
+
+/* Fraunces looks better for the launcher weight */
+.chat-fab { font-size: 1.5rem; }

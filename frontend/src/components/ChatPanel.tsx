@@ -113,9 +113,10 @@ export default function ChatPanel() {
 
       <div id="chat-panel" className={`chat ${open ? 'is-open' : ''}`} role="dialog" aria-label="Campus Customs chat">
         <header className="chat-head">
-          <div>
+          <span className="chat-crest" aria-hidden="true">CC</span>
+          <div className="chat-head-text">
             <strong>Campus Customs assistant</strong>
-            <span className="chat-status">Here to help you find Yale gear</span>
+            <span className="chat-status"><span className="chat-dot" aria-hidden="true" />Online · here to help</span>
           </div>
           <div className="chat-head-actions">
             {user && (
