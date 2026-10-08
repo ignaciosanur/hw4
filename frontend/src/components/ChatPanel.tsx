@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth'
 import { useChatResults } from '../chatResults'
 import Markdown from './Markdown'
-import { sendChatMessage } from '../api'
+import { clearChatHistory, fetchChatHistory, sendChatMessage } from '../api'
 import type { ChatProductCard, ChatReply } from '../types'
 import './ChatPanel.css'
 
@@ -28,6 +29,8 @@ export default function ChatPanel() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const { show } = useChatResults()
 
   useEffect(() => {
@@ -37,6 +40,22 @@ export default function ChatPanel() {
   useEffect(() => {
     if (open) inputRef.current?.focus()
   }, [open])
+
+  // Customer memory: when signed in, reload this shopper's saved conversation; when signed
+  // out, drop back to a fresh guest greeting (guest chat is never persisted).
+  useEffect(() => {
+    const token = localStorage.getItem('cc.session')
+    if (!user || !token) {
+      setTurns([GREETING])
+      return
+    }
+    fetchChatHistory(token)
+      .then((msgs) => {
+        const past: Turn[] = msgs.map((m) => ({ role: m.role, text: m.content }))
+        setTurns(past.length ? [{ ...GREETING, text: `Welcome back, ${user.first_name}! Here's where we left off.` }, ...past] : [GREETING])
+      })
+      .catch(() => setTurns([GREETING]))
+  }, [user])
 
   useEffect(() => {
     if (!open) return
@@ -60,7 +79,9 @@ export default function ChatPanel() {
     setSending(true)
     try {
       const token = localStorage.getItem('cc.session') ?? undefined
-      const reply: ChatReply = await sendChatMessage(message, history, token)
+      const match = location.pathname.match(/^\/products\/(.+)$/)
+      const pageContext = match ? { product_id: match[1], path: location.pathname } : { path: location.pathname }
+      const reply: ChatReply = await sendChatMessage(message, history, token, pageContext)
       setTurns((t) => [...t, { role: 'assistant', text: reply.reply, products: reply.products }])
       // Chat updates the page: surface the matches on the storefront grid and take the
       // shopper there, so the website itself shows what they asked about.
@@ -96,7 +117,22 @@ export default function ChatPanel() {
             <strong>Campus Customs assistant</strong>
             <span className="chat-status">Here to help you find Yale gear</span>
           </div>
-          <button className="chat-close" onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
+          <div className="chat-head-actions">
+            {user && (
+              <button
+                className="chat-forget"
+                onClick={async () => {
+                  const token = localStorage.getItem('cc.session')
+                  if (token) await clearChatHistory(token).catch(() => {})
+                  setTurns([GREETING])
+                }}
+                title="Delete your saved chat history"
+              >
+                Forget my chat
+              </button>
+            )}
+            <button className="chat-close" onClick={() => setOpen(false)} aria-label="Close chat">✕</button>
+          </div>
         </header>
 
         <div className="chat-body" ref={bodyRef}>

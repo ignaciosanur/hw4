@@ -91,9 +91,26 @@ class ChatTurn(BaseModel):
     content: str
 
 
+class PageContext(BaseModel):
+    """What the shopper is looking at when they send a message, so references like "this"
+    resolve. Currently the product being viewed on a single-item page."""
+
+    product_id: str | None = None
+    path: str | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     history: list[ChatTurn] = Field(default_factory=list)
+    page_context: PageContext | None = None
+
+
+class HistoryMessage(BaseModel):
+    """One stored past message, returned when a signed-in shopper's conversation reloads."""
+
+    role: str
+    content: str
+    created_at: str
 
 
 class ChatResponse(BaseModel):

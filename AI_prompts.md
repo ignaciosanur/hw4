@@ -334,3 +334,34 @@ re-listed every product with prices even though the cards are now on the page.
 - **Tightened the prompt**: when products are shown on the page, the chat reply is one or two
   short sentences that point to the page and do not repeat the list or prices; markdown is used
   sparingly.
+
+---
+
+## Problem 9: Customer Memory
+
+### Initial prompt
+
+> Problem 9: Customer memory
+>
+> When a shopper is logged in, I want you to save their chat history in the database in an appropriate table and reload it when they return (kinda like cookies, but keep them safe, and put a mechanism so you CAN'T sell them, even if this is hypothetical). The model should know who is chatting (i..e, username/name, email) I want you to put that in agent deps (or an equivalent clear pattern) and/or tools the agent can call.
+>
+> Also pass enough page context that if someone is on a product page and asks :do you have this in pink?" the agent knows which item they mean. Also, you can put code into the model ocntext.
+>
+> guess can still chat (put guardrails, tho, it has to be sales related), but history only needs to persist for logged-in users.
+>
+> Document in output/harness.md how user chat hisotry is stored, what cusomer fields the model sees, and how page context is passed
+
+### What we worked out before building
+
+- **Reused the `chat_messages` table** (the one the seed data revealed in Problem 2) rather than
+  inventing a new one — it already has user_id, role, content, products_json, created_at.
+- **"Can't sell them" was made a concrete code mechanism**, not a promise: all history access is in
+  one module, every function is scoped to one owner id taken from the verified token (never client
+  input), there is no cross-user/bulk/export path, the shopper can delete their own data
+  ("Forget my chat"), and a DATA_USE_POLICY + prompt rule forbid disclosing or selling data.
+- **Identity in agent deps** (first/last name, email) injected via a dynamic system prompt; the
+  model sees only the current shopper's fields, never another customer's, never password hashes.
+- **Page context via `ChatRequest.page_context`**: the front end sends the current product_id from
+  the URL; a dynamic system prompt resolves "this"/"it" to that product.
+- **Guests chat but are never persisted** (chat_messages.user_id is NOT NULL; the route only writes
+  for a resolved user), with the sales-only guardrail retained.

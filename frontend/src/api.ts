@@ -1,4 +1,4 @@
-import type { AuthResponse, ChatReply, ProductDetail, ProductSummary, UserPublic } from './types'
+import type { AuthResponse, ChatReply, HistoryMessage, ProductDetail, ProductSummary, UserPublic } from './types'
 
 /** Thrown for any non-2xx response so callers can show the real reason. */
 export class ApiError extends Error {
@@ -29,6 +29,7 @@ export async function sendChatMessage(
   message: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   token?: string,
+  pageContext?: { product_id?: string; path?: string },
 ): Promise<ChatReply> {
   const res = await fetch('/api/chat', {
     method: 'POST',
@@ -36,7 +37,7 @@ export async function sendChatMessage(
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, page_context: pageContext ?? null }),
   })
   if (!res.ok) {
     let detail = res.statusText
@@ -44,6 +45,20 @@ export async function sendChatMessage(
     throw new ApiError(res.status, detail)
   }
   return res.json()
+}
+
+export async function fetchChatHistory(token: string): Promise<HistoryMessage[]> {
+  const res = await fetch('/api/chat/history', { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new ApiError(res.status, res.statusText)
+  return res.json()
+}
+
+export async function clearChatHistory(token: string): Promise<void> {
+  const res = await fetch('/api/chat/history', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new ApiError(res.status, res.statusText)
 }
 
 // --- auth -------------------------------------------------------------------

@@ -143,3 +143,10 @@
 .bubble .md-list:last-child { margin-bottom: 0; }
 .bubble .md-list li { line-height: 1.45; }
 .bubble strong { font-weight: 700; }
+
+.chat-head-actions { display: flex; align-items: center; gap: 0.6rem; }
+.chat-forget {
+  background: none; border: 1px solid rgb(255 255 255 / 40%); color: #fff;
+  font-size: 0.72rem; padding: 0.25rem 0.55rem; border-radius: 999px; cursor: pointer;
+}
+.chat-forget:hover { background: rgb(255 255 255 / 12%); }

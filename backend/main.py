@@ -29,8 +29,9 @@ from pydantic import BaseModel
 import agent
 import auth
 import display
+import history
 import security
-from models import ChatRequest, ChatResponse
+from models import ChatRequest, ChatResponse, HistoryMessage
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
@@ -190,24 +191,67 @@ def get_product(product_id: str) -> ProductDetail:
     )
 
 
+def _user_from_token(authorization: str) -> dict | None:
+    """Resolve a Bearer session token to the signed-in user's row, or None. The user id is
+    always taken from the verified token — never from client input — so no caller can act on
+    another account's data (see backend/history.py privacy note)."""
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        return None
+    email = security.read_token(token, "session")
+    if not email:
+        return None
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, first_name, last_name, email FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, authorization: str = Header(default="")) -> ChatResponse:
     """The shop chatbot. Runs the PydanticAI agent and returns its reply plus any product
-    cards its tools surfaced. If a valid session token is sent, the agent greets the
-    shopper by first name; otherwise they are a guest."""
-    first_name: str | None = None
-    token = authorization.removeprefix("Bearer ").strip()
-    if token:
-        email = security.read_token(token, "session")
-        if email:
-            with get_db() as conn:
-                row = conn.execute("SELECT first_name FROM users WHERE email = ?", (email,)).fetchone()
-            if row and row["first_name"]:
-                first_name = row["first_name"]
+    cards its tools surfaced. A signed-in shopper is greeted by name and their conversation
+    is saved to their own history; guests can chat but nothing is persisted."""
+    user = _user_from_token(authorization)
+    product_id = req.page_context.product_id if req.page_context else None
     try:
-        return await agent.run_chat(req.message, first_name=first_name, history=req.history)
+        result = await agent.run_chat(
+            req.message,
+            first_name=user["first_name"] if user else None,
+            last_name=user["last_name"] if user else None,
+            email=user["email"] if user else None,
+            current_product_id=product_id,
+            history=req.history,
+        )
     except Exception as exc:  # gateway/model failure — keep the widget honest
         raise HTTPException(status_code=502, detail="The shop assistant is unavailable right now.") from exc
+
+    # Persist only for signed-in shoppers (chat_messages.user_id is NOT NULL).
+    if user:
+        history.save_turn(user["id"], "user", req.message)
+        history.save_turn(user["id"], "assistant", result.reply, result.products)
+    return result
+
+
+@app.get("/api/chat/history", response_model=list[HistoryMessage])
+def chat_history(authorization: str = Header(default="")) -> list[HistoryMessage]:
+    """The signed-in shopper's own saved conversation, oldest-first. Scoped to their id from
+    the token; there is no way to request another account's history."""
+    user = _user_from_token(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in to see your saved chat.")
+    return history.load_history(user["id"])
+
+
+@app.delete("/api/chat/history")
+def delete_chat_history(authorization: str = Header(default="")) -> dict:
+    """Let a shopper delete their own chat history — their control over their data."""
+    user = _user_from_token(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in to manage your saved chat.")
+    removed = history.clear_history(user["id"])
+    return {"deleted": removed}
 
 
 # Product images. Mounted last so it cannot shadow an /api route.

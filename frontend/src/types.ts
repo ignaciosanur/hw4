@@ -53,3 +53,9 @@ export interface AuthResponse {
   user: UserPublic
   session_token: string
 }
+
+export interface HistoryMessage {
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}

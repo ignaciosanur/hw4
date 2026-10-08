@@ -532,3 +532,47 @@ The bubble rendered replies as plain text, so markdown showed as raw `**`/`-`. A
 `Markdown.tsx` — a minimal safe renderer (bold, bullets, line breaks as React nodes, no
 `dangerouslySetInnerHTML`). The prompt was also tightened so that, with cards on the page, the
 chat reply is one or two short sentences and does not repeat the product list or prices.
+
+---
+
+## 10. Problem 9 — customer memory
+
+### How chat history is stored
+Signed-in shoppers' turns are saved to the existing **`chat_messages`** table (the one the seed
+data revealed in Problem 2): `user_id`, `role`, `content`, `products_json`, `created_at`. On each
+logged-in chat turn the route writes the user message and the assistant reply (the reply's product
+cards go into `products_json`, mirroring the seed shape). On return, the front end calls
+`GET /api/chat/history` and the most recent 50 messages reload into the chat panel, oldest-first,
+behind a "Welcome back" line. **Guests are never persisted** — `chat_messages.user_id` is NOT NULL
+and the route only writes when a valid session resolves to a user.
+
+### Privacy — the "you can't sell them" mechanism (enforced in code)
+`backend/history.py` holds the only access functions, and every one is scoped to a single owner id:
+- The id always comes from the **verified session token**, never from client input, so no request
+  can name another account. `load_history`/`save_turn`/`clear_history` take one `user_id`; there is
+  deliberately **no function that reads, joins, or exports across users** — nothing can bulk-collect
+  customer chats to sell them.
+- `GET`/`DELETE /api/chat/history` require auth and act only on the token's user.
+- A shopper can **delete their own history** ("Forget my chat" in the panel → `DELETE`), so they
+  control their data.
+- `DATA_USE_POLICY` states the no-sale rule in code; the agent prompt forbids disclosing or
+  "selling" any customer's data. The database is git-ignored, so chat never leaves via the repo.
+
+### What customer fields the model sees
+Passed in `ChatDeps` (agent dependencies) and injected via a dynamic system prompt:
+`first_name`, `last_name`, `email` — the signed-in shopper's own identity, so the agent greets by
+name and can help with their account. It sees **only the current shopper's** fields; it has no tool
+or deps path to any other customer, and never sees password hashes. Guests resolve to no identity.
+
+### How page context is passed
+`ChatRequest.page_context` carries `{ product_id, path }`. The front end fills `product_id` from the
+URL when the shopper is on a single-item page (`/products/:id`). The chat route puts it in
+`ChatDeps.current_product_id`, and a dynamic system prompt looks the product up and tells the agent
+"the shopper is currently viewing <name> (id=…), colours …; if they say 'this'/'it', they mean this
+one." So "do you have this in pink?" on a product page resolves without the shopper naming it.
+
+### Verified
+Page context ("do you have this in XL?" on the hoodie page → correct product, honest stock);
+persist + reload (full page refresh → "Welcome back" + prior conversation); "Forget my chat" (DB
+rows for the user → 0); guest chat not saved and history endpoints 401 for guests; guest sales
+guardrail intact.
