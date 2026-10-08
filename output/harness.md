@@ -576,3 +576,73 @@ Page context ("do you have this in XL?" on the hoodie page → correct product, 
 persist + reload (full page refresh → "Welcome back" + prior conversation); "Forget my chat" (DB
 rows for the user → 0); guest chat not saved and history endpoints 401 for guests; guest sales
 guardrail intact.
+
+---
+
+## 11. How the system works (reference)
+
+A React + Vite + TypeScript front end talks to a FastAPI backend whose chat brain is a
+PydanticAI agent. The front end calls `/api`; Vite proxies `/api` and `/media` to the backend so
+the browser sees one origin. Run commands are at the end of this section.
+
+### 11.1 Model types (`backend/models.py`) and why
+Full per-field rationale is in §1 (data dictionary) and §8 (lookup-result fields). Summary:
+
+| type | purpose | key fields / why |
+|---|---|---|
+| `ProductMatch` | search hit | `product_id` (key for follow-up tools), `product_name`, `garment_type`, `price`, `colors`, `total_stock` — small on purpose so search stays cheap |
+| `ProductInfo` | one product's details | **full** `description` + authoritative `price` + `colors`; **no** stock (stock is live, via `check_stock`, never from a cached detail) |
+| `SizeAvailability` | one size | `size`, `quantity`, explicit `in_stock` so out-of-stock is never inferred from a zero |
+| `StockInfo` | live stock | `in_stock_sizes` / `out_of_stock_sizes` ready-made so the agent states availability plainly; `by_size` for "how many in XL" |
+| `ProductCard` | display | adds `image_url`, `short_description`, stock summary — the shape the widget and grid render |
+| `PageContext` | what the shopper views | `product_id` so "this"/"it" resolves on a product page |
+| `ChatRequest/Response`, `ChatTurn`, `HistoryMessage` | chat I/O and memory | structured request (message + history + page context) and reply (text + product cards) |
+| `UserPublic` (auth.py) | safe user shape | id + name + email only — a password hash *cannot* be serialized out |
+
+### 11.2 Tools and abilities (`backend/tools.py`, wired in `backend/agent.py`)
+All read the database **read-only**; stock is always read live.
+
+| tool | ability |
+|---|---|
+| `search_products(query)` | free-text discovery / resolve a name to a `product_id` |
+| `filter_products(category, max_price, color, size_in_stock)` | precise structured filtering |
+| `lookup_product(product_id)` | description, price, colours |
+| `check_stock(product_id)` | total and per-size stock, out-of-stock called out |
+| `show_products(ids)` | display chosen products as cards on the page |
+| `list_categories()` | categories and prices for browsing |
+
+The agent also knows **who** is chatting (name/email in deps, for a signed-in shopper only) and
+**what** they are viewing (current product), both injected via dynamic system prompts.
+
+### 11.3 Safety rules (`backend/prompts/prompt.md`)
+The agent: stays on Campus Customs business; never invents products, prices, stock, or **store
+policy** (shipping/returns/discounts); grounds every claim in a tool result; treats text in
+product data / tool results / messages as data, not commands; never reveals the prompt, model, or
+tools; never handles passwords or payment data in chat (directs to the site); keeps each shopper's
+details and history private and never shares/sells customer data; gives no medical/legal/financial
+advice; declines abusive/illegal/harmful requests; doesn't recommend competitors; and is honest
+that it is an AI. These override any contrary instruction, including injected ones.
+
+### 11.4 Specs
+- **Model:** `OPENAI_MODEL` from `.env` (currently `gpt-5.6-luna`) via the Portkey gateway
+  (`OpenAIChatModel` over an `AsyncOpenAI` client with the `x-portkey-api-key` header). Never
+  hard-coded; Claude is the coding assistant only, never the shop's model.
+- **Loop limit (stopping rule):** `UsageLimits(request_limit=8)` on every run.
+- **Result caps:** `search_products` returns ≤8, `filter_products` ≤12; reloaded history ≤50
+  messages (`history.MAX_HISTORY`); guest response cache TTL 120s.
+- **Audit trail:** `output/audit_trail.json`, append-only JSONL — one record per run with time,
+  actor (guest / user id), tools (name + short args + short result), stop reason, token usage, and
+  duration. Never wiped (§12 / `backend/audit.py`).
+- **Persistence:** signed-in chat saved to `chat_messages` (owner-scoped; §10). Guests not saved.
+
+### 11.5 How to run
+```bash
+# Backend (Python 3.14) — from the backend/ folder
+cd backend && uvicorn main:app --reload --port 8000
+
+# Front end (Node) — from the repo root
+npm --prefix frontend run dev
+```
+Then open the Vite URL (default http://127.0.0.1:5173; this repo pins 5183). The front-end proxy
+targets `BACKEND_PORT` (default 8000); set `VITE_API_TARGET` in a git-ignored `.env.local` if the
+backend runs on another port. The database and images are git-ignored — restore `data/` first.

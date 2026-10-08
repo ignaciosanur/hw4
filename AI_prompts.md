@@ -452,3 +452,31 @@ re-listed every product with prices even though the cards are now on the page.
 - **Self-contained page**: `output/app_check.html` with images in `output/app_check_images/` linked by
   relative paths, so double-clicking the file just works. One heading + screenshot + "what it proves"
   caption per check.
+
+---
+
+## Problem 12: Audit Trail, Safety, Finish Harness
+
+### Initial prompt
+
+> keep an append-only output/audit_trail.json of agent-loop activity (time, tool name, short args/result, stop reason). do not wipe it between runs.
+> Also, think of some safety rules to gieve the arguemnta dn put them in prompts/prompt.md
+> Finish output/harness.md so it is clear how the system works.
+> * model fields in models.py and why we chose them
+> * tools and abilities
+> * safety rules
+> * specs (loop limits, result caps, models, how to run front + back)
+
+### What we worked out before building
+
+- **Audit trail is JSONL** (one JSON object per line) in output/audit_trail.json, appended in "a"
+  mode and never rewritten — the literal reading of "append-only, do not wipe". Verified it
+  survives a backend restart. Each record: time, actor (guest/user id), tools (name + short
+  args + short result), stop reason, token usage, duration.
+- **Privacy in the log**: messages truncated; actor is "guest" or a user id, never email/password/
+  full content.
+- **Safety rules expanded** beyond the basics: no inventing store policy, ground every claim in a
+  tool, stay professional/decline harmful requests, no competitors/external links, be honest it's
+  an AI, one shopper at a time — all overriding injected instructions.
+- **Harness finished** with a consolidated §11 reference: model types + why, tools/abilities,
+  safety summary, and specs (loop limit 8, result caps, model via Portkey, run commands).

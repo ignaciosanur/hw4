@@ -292,6 +292,7 @@ async def chat(req: ChatRequest, authorization: str = Header(default="")) -> Cha
             last_name=user["last_name"] if user else None,
             email=user["email"] if user else None,
             current_product_id=product_id,
+            user_id=user["id"] if user else None,
             history=req.history,
         )
     except Exception as exc:  # gateway/model failure — keep the widget honest

@@ -28,6 +28,9 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.usage import UsageLimits
+from pydantic_ai.exceptions import UsageLimitExceeded
+
+import audit
 
 import tools
 from models import ChatResponse, ChatTurn, ProductCard, ProductInfo, ProductMatch, StockInfo
@@ -177,13 +180,48 @@ def _to_history(turns: list[ChatTurn]) -> list[ModelMessage]:
 
 async def run_chat(message: str, *, first_name: str | None = None, last_name: str | None = None,
                    email: str | None = None, current_product_id: str | None = None,
+                   user_id: int | None = None,
                    history: list[ChatTurn] | None = None) -> ChatResponse:
-    """Run one chat turn and return the reply plus any product cards the tools surfaced."""
+    """Run one chat turn and return the reply plus any product cards the tools surfaced.
+
+    Every run is recorded to the append-only audit trail: the tools it called, why it
+    stopped, and token usage."""
+    import time as _t
     deps = ChatDeps(
         db_path=DB_PATH, first_name=first_name, last_name=last_name, email=email,
         current_product_id=current_product_id,
     )
-    result = await agent.run(
-        message, deps=deps, message_history=_to_history(history or []), usage_limits=USAGE_LIMITS
-    )
-    return ChatResponse(reply=result.output, products=list(deps.surfaced.values()))
+    started = _t.time()
+    stop_reason = "completed"
+    tool_calls: list[dict] = []
+    usage_info: dict = {}
+    try:
+        result = await agent.run(
+            message, deps=deps, message_history=_to_history(history or []), usage_limits=USAGE_LIMITS
+        )
+        tool_calls = audit.extract_tool_calls(result.all_messages())
+        u = result.usage
+        usage_info = {
+            "input_tokens": getattr(u, "input_tokens", None),
+            "output_tokens": getattr(u, "output_tokens", None),
+            "total_tokens": getattr(u, "total_tokens", None),
+            "requests": getattr(u, "requests", None),
+        }
+        return ChatResponse(reply=result.output, products=list(deps.surfaced.values()))
+    except UsageLimitExceeded as exc:
+        stop_reason = f"usage_limit: {exc}"
+        raise
+    except Exception as exc:
+        stop_reason = f"error: {type(exc).__name__}"
+        raise
+    finally:
+        audit.log_run({
+            "actor": f"user:{user_id}" if user_id else "guest",
+            "on_product": current_product_id,
+            "message": message,
+            "tools": tool_calls,
+            "num_tools": len(tool_calls),
+            "stop_reason": stop_reason,
+            "usage": usage_info,
+            "duration_ms": round((_t.time() - started) * 1000),
+        })
