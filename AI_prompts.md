@@ -480,3 +480,24 @@ re-listed every product with prices even though the cards are now on the page.
   an AI, one shopper at a time — all overriding injected instructions.
 - **Harness finished** with a consolidated §11 reference: model types + why, tools/abilities,
   safety summary, and specs (loop limit 8, result caps, model via Portkey, run commands).
+
+---
+
+## Problem 13: Push to GitHub and Submit the URL
+
+### Initial prompt
+
+> I want my code to be in a folder named h4 if that's already not the case, and make it to a public GitHub repository. I need the repo URL so I can submit it and graders can open and clone. We do NOT need to upload a zip for this homework.
+> Do not put my real .env, campus_customs.db, or product images on the GitHub repo. Use .gitignore. Include .env.example with placeholders only. The expected layout is in the screenshot.
+> Local-only data pack (not in git): data/ campus_customs.db, products/. The agent itself is four files under backend/: prompts/prompt.md, agent.py, tools.py, models.py. README.md should explain how to run the front end and back end after placing the data pack.
+
+### What we worked out before building
+
+- **Repo named `hw4`** per the expected-layout screenshot (the prompt text said "h4"; the
+  screenshot showed `hw4/`, so cloning yields a `hw4/` folder matching the diagram).
+- **Scanned the entire git history**, not just the current tree, to confirm `.env`,
+  `campus_customs.db`, `data/`, and product images were never committed — then confirmed the
+  same against the live remote after pushing (82 entries, all clean).
+- **`.env.example` is placeholders only**; `.gitignore` blocks `data/`, `*.db`, `.env*`,
+  `node_modules/`, `.venv/`.
+- **Repo:** https://github.com/ignaciosanur/hw4 (public).
